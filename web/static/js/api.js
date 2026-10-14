@@ -18,17 +18,17 @@ export async function fetchGallery() {
   return res.json();
 }
 
-export async function fetchModels() {
-  const res = await fetch('/api/models');
+export async function fetchModels(engine = 'ipex') {
+  const res = await fetch(`/api/models?engine=${encodeURIComponent(engine)}`);
   if (!res.ok) throw new Error('Failed to fetch models');
   return res.json();
 }
 
-export async function loadModelStream(modelPath, onProgress, onComplete, onError) {
+export async function loadModelStream(modelPath, engine = 'ipex', onProgress, onComplete, onError) {
   const res = await fetch('/api/model/load', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model_path: modelPath || '' })
+    body: JSON.stringify({ model_path: modelPath || '', engine: engine || 'ipex' })
   });
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
@@ -184,11 +184,12 @@ export async function exportBundle(payload) {
   return res.json();
 }
 
-export async function searchHFModels(query = '', page = 1, limit = 10) {
+export async function searchHFModels(query = '', page = 1, limit = 10, engine = 'ipex') {
   const params = new URLSearchParams({
     q: query,
     page: String(page),
-    limit: String(limit)
+    limit: String(limit),
+    engine: engine || 'ipex'
   });
   const res = await fetch(`/api/hf/search?${params.toString()}`);
   if (!res.ok) {
@@ -198,11 +199,11 @@ export async function searchHFModels(query = '', page = 1, limit = 10) {
   return res.json();
 }
 
-export async function downloadHFModel(repoId, filename) {
+export async function downloadHFModel(repoId, filename, engine = 'ipex') {
   const res = await fetch('/api/hf/download', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ repo_id: repoId, filename })
+    body: JSON.stringify({ repo_id: repoId, filename, engine: engine || 'ipex' })
   });
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));

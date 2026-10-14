@@ -1,4 +1,4 @@
-import { state, toggleSelection, selectAll, clearSelection, subscribe } from './state.js?v=10';
+import { state, toggleSelection, selectAll, clearSelection, subscribe } from './state.js?v=11';
 
 export function initGallery(onOpenLightbox, onOpenExport, onDeleteSelected) {
   const grid = document.getElementById('galleryGrid');

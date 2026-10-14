@@ -114,13 +114,18 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	dev, model, ready := s.manager.GetInfo()
 	cfg := s.manager.GetConfig()
 	modelsDir := filepath.Dir(cfg.ModelPath)
-	availableModels := s.manager.ScanAvailableModels(modelsDir)
+	activeEngine := s.manager.GetActiveEngine()
+	availableModels := s.manager.ScanAvailableModels(modelsDir, activeEngine)
 
 	statusMsg := "Ready for inference"
 	if !ready {
 		statusMsg = "Standby / Model Unloaded"
 		if dev == "" {
-			dev = cfg.Device
+			if activeEngine == "openvino" {
+				dev = "Intel Arc GPU (OpenVINO)"
+			} else {
+				dev = cfg.Device
+			}
 		}
 		if model == "" {
 			model = filepath.Base(cfg.ModelPath)
@@ -132,15 +137,20 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		Device:          dev,
 		Model:           filepath.Base(model),
 		StatusMsg:       statusMsg,
+		ActiveEngine:    activeEngine,
 		AvailableModels: availableModels,
 	}
 	writeJSON(w, http.StatusOK, status)
 }
 
 func (s *Server) handleModelsList(w http.ResponseWriter, r *http.Request) {
+	engineFilter := r.URL.Query().Get("engine")
+	if engineFilter == "" {
+		engineFilter = s.manager.GetActiveEngine()
+	}
 	cfg := s.manager.GetConfig()
 	modelsDir := filepath.Dir(cfg.ModelPath)
-	models := s.manager.ScanAvailableModels(modelsDir)
+	models := s.manager.ScanAvailableModels(modelsDir, engineFilter)
 	writeJSON(w, http.StatusOK, models)
 }
 
@@ -163,20 +173,30 @@ func (s *Server) handleModelLoad(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	targetModel := req.ModelPath
-	if targetModel == "" {
-		targetModel = s.manager.GetConfig().ModelPath
+	engineType := req.Engine
+	if engineType == "" {
+		engineType = s.manager.GetActiveEngine()
 	}
 
-	log.Printf("[STUDIO MODEL] Loading model: %s", targetModel)
+	targetModel := req.ModelPath
+	if targetModel == "" {
+		if engineType == "openvino" {
+			targetModel = "models/OpenVINO"
+		} else {
+			targetModel = s.manager.GetConfig().ModelPath
+		}
+	}
+
+	log.Printf("[STUDIO MODEL] Loading model: %s on engine: %s", targetModel, engineType)
 	sendEvent(engine.ModelProgress{
 		Status:     "loading",
 		Percentage: 10,
-		Message:    "Preparing Intel Arc GPU runtime...",
+		Message:    fmt.Sprintf("Preparing %s runtime...", strings.ToUpper(engineType)),
 		Model:      filepath.Base(targetModel),
+		Engine:     engineType,
 	})
 
-	err := s.manager.LoadModel(r.Context(), targetModel, func(prog engine.ModelProgress) {
+	err := s.manager.LoadModelWithEngine(r.Context(), targetModel, engineType, func(prog engine.ModelProgress) {
 		log.Printf("[STUDIO MODEL LOAD] %d%% - %s", prog.Percentage, prog.Message)
 		sendEvent(prog)
 	})
@@ -517,8 +537,12 @@ func (s *Server) handleHFSearch(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	engine := r.URL.Query().Get("engine")
+	if engine == "" {
+		engine = s.manager.GetActiveEngine()
+	}
 
-	res, err := s.downloader.Search(r.Context(), q, page, limit)
+	res, err := s.downloader.Search(r.Context(), q, page, limit, engine)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -530,6 +554,7 @@ func (s *Server) handleHFDownload(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		RepoID   string `json:"repo_id"`
 		Filename string `json:"filename"`
+		Engine   string `json:"engine"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json payload"})
@@ -539,12 +564,15 @@ func (s *Server) handleHFDownload(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "repo_id and filename are required"})
 		return
 	}
-	if !strings.HasSuffix(strings.ToLower(req.Filename), ".safetensors") {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "only .safetensors files can be downloaded"})
+	if req.Engine == "" {
+		req.Engine = s.manager.GetActiveEngine()
+	}
+	if req.Engine != "openvino" && !strings.HasSuffix(strings.ToLower(req.Filename), ".safetensors") {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "only .safetensors files can be downloaded for IPEX engine"})
 		return
 	}
 
-	task, err := s.downloader.StartDownload(req.RepoID, req.Filename)
+	task, err := s.downloader.StartDownload(req.RepoID, req.Filename, req.Engine)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return

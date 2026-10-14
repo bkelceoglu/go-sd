@@ -9,10 +9,11 @@ import {
   fetchHFDownloadStatus,
   cancelHFDownload,
   fetchHFModelInfo
-} from './api.js?v=10';
-import { state } from './state.js?v=10';
+} from './api.js?v=11';
+import { state } from './state.js?v=11';
 
 let isBusy = false;
+let activeEngine = 'ipex'; // "ipex" | "openvino"
 let activeTab = 'local';
 let selectedModelPath = '';
 let installedModelsCache = [];
@@ -66,6 +67,16 @@ export function initModelManager(onStatusUpdated, showToastFn) {
   if (modelSettingsBtn) {
     modelSettingsBtn.addEventListener('click', () => {
       focusModelPanel();
+    });
+  }
+
+  // Inference Engine Selector (IPEX vs OpenVINO)
+  const engineSelect = document.getElementById('engineSelect');
+  if (engineSelect) {
+    engineSelect.value = activeEngine;
+    engineSelect.addEventListener('change', () => {
+      activeEngine = engineSelect.value || 'ipex';
+      onEngineChanged();
     });
   }
 
@@ -164,12 +175,101 @@ export function focusModelPanel() {
 export const openModelModal = focusModelPanel;
 
 // ==========================================
+// ENGINE SWITCHING & DUAL-ENGINE COORDINATION
+// ==========================================
+
+function onEngineChanged() {
+  const badge = document.getElementById("activeEngineBadge");
+  if (badge) {
+    badge.className = `engine-badge ${activeEngine}`;
+    badge.textContent = activeEngine === "openvino" ? "Intel OpenVINO" : "Intel IPEX";
+  }
+
+  const deviceTag = document.getElementById("panelModelDeviceTag");
+  if (deviceTag) {
+    deviceTag.textContent = activeEngine === "openvino" ? "Intel Arc XPU (OpenVINO)" : "Intel Arc XPU (IPEX)";
+  }
+
+  const sectionSub = document.getElementById("installedSectionSubtitle");
+  if (sectionSub) {
+    sectionSub.textContent = activeEngine === "openvino" ? "Installed OpenVINO Models" : "Installed Safetensors";
+  }
+
+  const selectLabel = document.getElementById("modelSelectLabel");
+  if (selectLabel) {
+    selectLabel.textContent = activeEngine === "openvino" ? "Select OpenVINO Model" : "Select Checkpoint Model";
+  }
+
+  const hintText = document.getElementById("hfStorageHintText");
+  if (hintText) {
+    const folder = activeEngine === "openvino" ? "models/OpenVINO/" : "models/Stable-diffusion/";
+    hintText.innerHTML = `📁 Target Folder: <code>${folder}</code>`;
+  }
+
+  selectedModelPath = "";
+  refreshModelsList();
+  renderCategoryChips();
+
+  if (activeTab === "hf" || hfHasLoaded) {
+    hfQuery = "";
+    hfPage = 1;
+    const searchInput = document.getElementById("hfSearchInput");
+    const clearBtn = document.getElementById("hfClearSearchBtn");
+    if (searchInput) searchInput.value = "";
+    if (clearBtn) clearBtn.classList.add("hidden");
+    loadHFModels();
+  }
+}
+
+function renderCategoryChips() {
+  const container = document.getElementById("hfFilterChips");
+  if (!container) return;
+
+  if (activeEngine === "openvino") {
+    container.innerHTML = `
+      <button type="button" class="chip active" data-query="">⚡ Latest</button>
+      <button type="button" class="chip" data-query="xl-base">🖼️ SDXL FP16</button>
+      <button type="button" class="chip" data-query="xl-base-1.0-int8">🚀 SDXL INT8</button>
+      <button type="button" class="chip" data-query="stable-diffusion-v1-5">🎨 SD 1.5</button>
+      <button type="button" class="chip" data-query="flux">✨ FLUX Schnell</button>
+    `;
+  } else {
+    container.innerHTML = `
+      <button type="button" class="chip active" data-query="">⚡ Latest</button>
+      <button type="button" class="chip" data-query="sdxl lightning">⚡ Lightning</button>
+      <button type="button" class="chip" data-query="sdxl turbo">🚀 Turbo</button>
+      <button type="button" class="chip" data-query="realistic sdxl">📸 Photo</button>
+      <button type="button" class="chip" data-query="animagine xl">🎨 Anime</button>
+    `;
+  }
+
+  const chips = container.querySelectorAll(".chip");
+  chips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      chips.forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+      const q = chip.getAttribute("data-query") || "";
+      const searchInput = document.getElementById("hfSearchInput");
+      const clearBtn = document.getElementById("hfClearSearchBtn");
+      if (searchInput) {
+        searchInput.value = q;
+        if (clearBtn) {
+          if (q) clearBtn.classList.remove("hidden");
+          else clearBtn.classList.add("hidden");
+        }
+      }
+      triggerHFSearch(q);
+    });
+  });
+}
+
+// ==========================================
 // LOCAL MODELS (TAB 1)
 // ==========================================
 
 export async function refreshModelsList() {
   try {
-    const models = await fetchModels();
+    const models = await fetchModels(activeEngine);
     installedModelsCache = models || [];
     populateModelsDropdown(installedModelsCache);
   } catch (err) {
@@ -408,6 +508,7 @@ async function handleLoad(modelPath, onStatusUpdated, showToastFn) {
   try {
     await loadModelStream(
       modelPath,
+      activeEngine,
       (prog) => {
         const pct = prog.percentage || 40;
         const msg = prog.message || 'Loading checkpoint components...';
@@ -600,22 +701,8 @@ function initHFHubControls() {
     });
   }
 
-  // Category chips
-  filterChips.forEach((chip) => {
-    chip.addEventListener('click', () => {
-      filterChips.forEach((c) => c.classList.remove('active'));
-      chip.classList.add('active');
-      const q = chip.getAttribute('data-query') || '';
-      if (searchInput) {
-        searchInput.value = q;
-        if (clearBtn) {
-          if (q) clearBtn.classList.remove('hidden');
-          else clearBtn.classList.add('hidden');
-        }
-      }
-      triggerHFSearch(q);
-    });
-  });
+  // Category chips rendered dynamically based on active engine
+  renderCategoryChips();
 
   // Pagination
   if (prevBtn) {
@@ -659,7 +746,7 @@ async function loadHFModels() {
   }
 
   try {
-    const data = await searchHFModels(hfQuery, hfPage, hfLimit);
+    const data = await searchHFModels(hfQuery, hfPage, hfLimit, activeEngine);
     hfTotalPages = data.total_pages || 1;
 
     if (pageIndicator) {
@@ -868,11 +955,12 @@ function renderProgressWidgetHtml(taskKey, filename, task) {
 async function handleStartHFDownload(repoID, filename) {
   const taskKey = `${repoID}/${filename}`;
   try {
-    const task = await downloadHFModel(repoID, filename);
+    const task = await downloadHFModel(repoID, filename, activeEngine);
     activeDownloadsMap[taskKey] = task;
 
+    const targetFolder = activeEngine === 'openvino' ? 'models/OpenVINO/' : 'models/Stable-diffusion/';
     if (toastCallback) {
-      toastCallback(`Download started: ${filename} saving to models/Stable-diffusion/`, 'info', 5000);
+      toastCallback(`Download started: ${filename} saving to ${targetFolder}`, 'info', 5000);
     }
 
     // Replace the row with progress widget

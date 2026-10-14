@@ -26,6 +26,7 @@ type JobResult struct {
 	Error          string  `json:"error,omitempty"`
 	Device         string  `json:"device,omitempty"`
 	Model          string  `json:"model,omitempty"`
+	Engine         string  `json:"engine,omitempty"`
 }
 
 // JobProgress represents streaming step updates from the worker.
@@ -40,10 +41,13 @@ type JobProgress struct {
 
 // Config specifies the runtime settings for the embedded engine.
 type Config struct {
-	PythonPath   string `json:"python_path"`
-	WorkerScript string `json:"worker_script"`
-	ModelPath    string `json:"model_path"`
-	Device       string `json:"device"`
+	PythonPath         string `json:"python_path"`
+	WorkerScript       string `json:"worker_script"`
+	OpenVINOPythonPath string `json:"openvino_python_path"`
+	OpenVINOWorker     string `json:"openvino_worker"`
+	ModelPath          string `json:"model_path"`
+	Device             string `json:"device"`
+	ActiveEngine       string `json:"active_engine"` // "ipex" | "openvino"
 }
 
 // ModelProgress represents streaming progress when loading or unloading a model.
@@ -53,14 +57,16 @@ type ModelProgress struct {
 	Message    string `json:"message"`
 	Model      string `json:"model,omitempty"`
 	Device     string `json:"device,omitempty"`
+	Engine     string `json:"engine,omitempty"`
 	Error      string `json:"error,omitempty"`
 }
 
-// ModelInfo describes a detected safetensors checkpoint on disk.
+// ModelInfo describes a detected safetensors or OpenVINO checkpoint on disk.
 type ModelInfo struct {
 	Name     string  `json:"name"`
 	Filename string  `json:"filename"`
 	Path     string  `json:"path"`
 	SizeGB   float64 `json:"size_gb"`
 	IsActive bool    `json:"is_active"`
+	Engine   string  `json:"engine"` // "ipex" | "openvino"
 }

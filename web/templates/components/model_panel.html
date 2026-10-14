@@ -3,12 +3,29 @@
   <div class="panel-header">
     <div class="panel-header-title">
       <h2 class="panel-title">Model Management</h2>
-      <span class="panel-tag" id="panelModelDeviceTag">Intel Arc XPU</span>
+      <span class="panel-tag" id="panelModelDeviceTag">Intel Arc XPU (IPEX)</span>
     </div>
     <!-- Model Active Dot Indicator -->
     <div id="panelModelStatusDot" class="status-indicator standby" title="Diffusion Engine State">
       <span class="dot"></span>
       <span id="panelModelStatusText" class="status-label">Standby</span>
+    </div>
+  </div>
+
+  <!-- Inference Engine Selector Card -->
+  <div class="engine-selector-card">
+    <div class="engine-selector-header">
+      <div class="engine-selector-title">
+        <span class="engine-icon">⚙️</span>
+        <span>Inference Engine:</span>
+      </div>
+      <span id="activeEngineBadge" class="engine-badge ipex">Intel IPEX</span>
+    </div>
+    <div class="select-wrapper">
+      <select id="engineSelect" class="form-select engine-select">
+        <option value="ipex" selected>⚡ Intel Arc XPU (IPEX / PyTorch bfloat16)</option>
+        <option value="openvino">🚀 Intel OpenVINO GenAI (Native XMX / IR)</option>
+      </select>
     </div>
   </div>
 
@@ -58,7 +75,7 @@
     <!-- Quick Switcher Dropdown -->
     <div class="form-group">
       <div class="label-row">
-        <label for="modelSelect">Select SDXL Checkpoint</label>
+        <label for="modelSelect" id="modelSelectLabel">Select Checkpoint Model</label>
         <button type="button" id="refreshLocalModelsBtn" class="mini-icon-btn" title="Rescan local models">🔄</button>
       </div>
       <div class="select-wrapper">
@@ -74,7 +91,7 @@
       <input
         type="text"
         id="customModelInput"
-        placeholder="/path/to/models/Stable-diffusion/custom.safetensors"
+        placeholder="/path/to/models/custom.safetensors or OpenVINO dir"
         class="form-input text-xs"
       >
     </div>
@@ -94,7 +111,7 @@
     <!-- Installed Models List -->
     <div class="installed-models-section">
       <div class="section-title-row">
-        <span class="section-subtitle">Installed Safetensors</span>
+        <span class="section-subtitle" id="installedSectionSubtitle">Installed Safetensors</span>
         <span id="installedCountBadge" class="mini-badge">0 detected</span>
       </div>
       <div id="installedModelsList" class="installed-cards-container">
@@ -115,7 +132,7 @@
           type="text"
           id="hfSearchInput"
           class="form-input hf-search-input"
-          placeholder="Search SDXL models (e.g. juggernaut, lightning, realistic)..."
+          placeholder="Search models on HuggingFace..."
         >
         <button type="button" id="hfClearSearchBtn" class="clear-btn hidden" title="Clear search">✕</button>
       </div>
@@ -123,24 +140,20 @@
     </div>
 
     <!-- HF Category Filter Chips -->
-    <div class="hf-filter-chips">
-      <button type="button" class="chip active" data-query="">⚡ Latest</button>
-      <button type="button" class="chip" data-query="sdxl lightning">⚡ Lightning</button>
-      <button type="button" class="chip" data-query="sdxl turbo">🚀 Turbo</button>
-      <button type="button" class="chip" data-query="realistic sdxl">📸 Photo</button>
-      <button type="button" class="chip" data-query="animagine xl">🎨 Anime</button>
+    <div class="hf-filter-chips" id="hfFilterChips">
+      <!-- Injected dynamically based on active engine -->
     </div>
 
     <!-- Storage Path Information -->
     <div class="hf-storage-hint">
-      <span>📁 Target Folder: <code>models/Stable-diffusion/</code></span>
+      <span id="hfStorageHintText">📁 Target Folder: <code>models/Stable-diffusion/</code></span>
     </div>
 
     <!-- Model Cards List Container -->
     <div id="hfModelList" class="hf-models-list">
       <div class="hf-loading-state">
         <div class="btn-spinner"></div>
-        <span>Fetching latest SDXL models from HuggingFace...</span>
+        <span>Fetching compatible models from HuggingFace...</span>
       </div>
     </div>
 
