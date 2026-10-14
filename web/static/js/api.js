@@ -147,7 +147,7 @@ export async function generateArtStream(payload, onProgress, onComplete, onError
         if (data.status === 'progress' && onProgress) {
           onProgress(data);
         } else if (data.status === 'complete' && onComplete) {
-          onComplete(data.image);
+          onComplete(data.image, data);
         } else if (data.status === 'error' && onError) {
           onError(data.error);
         }

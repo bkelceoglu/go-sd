@@ -1,7 +1,7 @@
 // Model & GPU Memory Manager (Lifecycle, Hot-Swap & Memory Reclamation)
 
-import { fetchModels, loadModelStream, unloadModelStream } from './api.js?v=6';
-import { state } from './state.js?v=6';
+import { fetchModels, loadModelStream, unloadModelStream } from './api.js?v=7';
+import { state } from './state.js?v=7';
 
 let isBusy = false;
 

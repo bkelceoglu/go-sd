@@ -1,6 +1,6 @@
-import { generateArtStream } from './api.js?v=6';
-import { state, emit } from './state.js?v=6';
-import { openModelModal } from './model_manager.js?v=6';
+import { generateArtStream } from './api.js?v=7';
+import { state, emit } from './state.js?v=7';
+import { openModelModal } from './model_manager.js?v=7';
 
 export function initGenerator(onStart, onProgress, onSuccess, onError) {
   const form = document.getElementById('generatorForm');
@@ -81,7 +81,7 @@ export function initGenerator(onStart, onProgress, onSuccess, onError) {
 
       if (onStart) {
         try {
-          onStart(payload.prompt);
+          onStart(payload.prompt, payload.batch_count);
         } catch (uiErr) {
           console.warn('[STUDIO] onStart UI warning:', uiErr);
         }
@@ -90,10 +90,15 @@ export function initGenerator(onStart, onProgress, onSuccess, onError) {
       await generateArtStream(
         payload,
         (progData) => {
+          if (progData.batch_total && progData.batch_total > 1) {
+            genBtnText.textContent = `Rendering (${progData.batch_index}/${progData.batch_total})...`;
+          } else {
+            genBtnText.textContent = 'Rendering on Intel Arc GPU...';
+          }
           if (onProgress) onProgress(progData);
         },
-        (completedImg) => {
-          if (onSuccess) onSuccess(completedImg);
+        (completedImg, batchMeta) => {
+          if (onSuccess) onSuccess(completedImg, batchMeta);
         },
         (errMsg) => {
           console.error('[STUDIO] Stream reported error:', errMsg);

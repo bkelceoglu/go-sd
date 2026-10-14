@@ -1,4 +1,4 @@
-import { state, toggleSelection, selectAll, clearSelection, subscribe } from './state.js?v=6';
+import { state, toggleSelection, selectAll, clearSelection, subscribe } from './state.js?v=7';
 
 export function initGallery(onOpenLightbox, onOpenExport, onDeleteSelected) {
   const grid = document.getElementById('galleryGrid');
@@ -141,7 +141,7 @@ export function renderGallery(images, onOpenLightbox) {
   });
 }
 
-export function createLiveCard(prompt) {
+export function createLiveCard(prompt, batchIndex = 1, batchTotal = 1) {
   const grid = document.getElementById('galleryGrid');
   const emptyState = document.getElementById('emptyGallery');
   if (emptyState) emptyState.classList.add('hidden');
@@ -152,12 +152,14 @@ export function createLiveCard(prompt) {
   card.id = 'liveGeneratingCard';
   card.className = 'gallery-card live-generating';
 
+  const batchLabel = batchTotal > 1 ? ` (${batchIndex}/${batchTotal})` : '';
+
   card.innerHTML = `
     <div class="live-preview-wrap">
       <img id="liveImg" class="live-preview-img" src="" alt="Live generation preview" style="display: none;">
       <div class="live-overlay">
         <div class="live-badge-top">
-          <span id="liveStepBadge" class="live-badge-step">Initializing...</span>
+          <span id="liveStepBadge" class="live-badge-step">Initializing${batchLabel}...</span>
           <span id="livePctBadge" class="live-badge-pct">0%</span>
         </div>
         <div class="live-progress-container">
@@ -166,7 +168,7 @@ export function createLiveCard(prompt) {
       </div>
     </div>
     <div class="card-info">
-      <div class="card-prompt" title="${prompt}">Rendering: ${prompt}</div>
+      <div id="livePromptText" class="card-prompt" title="${prompt}">Rendering${batchLabel}: ${prompt}</div>
       <div class="card-meta">
         <span>SDXL Pipeline</span>
         <span id="liveStatusText">Intel Arc GPU</span>
@@ -178,19 +180,35 @@ export function createLiveCard(prompt) {
 }
 
 export function updateLiveProgress(data) {
-  const card = document.getElementById('liveGeneratingCard');
-  if (!card) return;
+  let card = document.getElementById('liveGeneratingCard');
+  if (!card) {
+    createLiveCard(data.prompt || 'Artwork', data.batch_index || 1, data.batch_total || 1);
+    card = document.getElementById('liveGeneratingCard');
+  }
 
   const stepBadge = document.getElementById('liveStepBadge');
   const pctBadge = document.getElementById('livePctBadge');
   const bar = document.getElementById('liveProgressBar');
   const img = document.getElementById('liveImg');
   const statusText = document.getElementById('liveStatusText');
+  const promptText = document.getElementById('livePromptText');
 
-  if (stepBadge) stepBadge.textContent = `Step ${data.step} / ${data.total_steps}`;
+  const batchText = (data.batch_total && data.batch_total > 1) 
+    ? ` · Item ${data.batch_index}/${data.batch_total}` 
+    : '';
+
+  if (stepBadge) stepBadge.textContent = `Step ${data.step}/${data.total_steps}${batchText}`;
   if (pctBadge) pctBadge.textContent = `${data.percentage}%`;
   if (bar) bar.style.width = `${Math.max(5, data.percentage)}%`;
   if (statusText) statusText.textContent = `Denoising (${data.percentage}%)`;
+
+  if (promptText && data.prompt) {
+    const batchLabel = (data.batch_total && data.batch_total > 1) 
+      ? ` (${data.batch_index}/${data.batch_total})` 
+      : '';
+    promptText.textContent = `Rendering${batchLabel}: ${data.prompt}`;
+    promptText.title = data.prompt;
+  }
 
   if (data.preview && img) {
     img.src = data.preview;

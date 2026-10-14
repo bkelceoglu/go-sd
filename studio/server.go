@@ -344,17 +344,23 @@ func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	for i := 0; i < batchCount; i++ {
-		img, err := s.generateSingleItemStreaming(r.Context(), req, imagesDir, rng, i, sendEvent)
+		img, err := s.generateSingleItemStreaming(r.Context(), req, imagesDir, rng, i, batchCount, sendEvent)
 		if err != nil {
 			log.Printf("[STUDIO ERROR] Generation failed: %v", err)
 			sendEvent(map[string]any{"status": "error", "error": err.Error()})
 			return
 		}
 		log.Printf("[STUDIO SUCCESS] Image %d/%d generated: %s in %.2fs", i+1, batchCount, img.Filename, img.ElapsedSeconds)
-		sendEvent(map[string]any{"status": "complete", "image": img})
+		sendEvent(map[string]any{
+			"status":       "complete",
+			"image":        img,
+			"batch_index":  i + 1,
+			"batch_total":  batchCount,
+			"is_batch_end": (i == batchCount-1),
+		})
 
 		if i < batchCount-1 {
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(300 * time.Millisecond)
 		}
 	}
 }
@@ -365,6 +371,7 @@ func (s *Server) generateSingleItemStreaming(
 	imagesDir string,
 	rng *rand.Rand,
 	index int,
+	batchTotal int,
 	sendEvent func(any),
 ) (*GeneratedImage, error) {
 	expandedPrompt := ExpandWildcards(req.Prompt, rng)
@@ -396,8 +403,17 @@ func (s *Server) generateSingleItemStreaming(
 	}
 
 	res, err := s.manager.GenerateWithProgress(ctx, jobReq, func(prog engine.JobProgress) {
-		log.Printf("[STUDIO STEP] %d/%d (%d%%) for %s", prog.Step, prog.TotalSteps, prog.Percentage, jobReq.ID)
-		sendEvent(prog)
+		log.Printf("[STUDIO STEP] %d/%d (%d%%) for %s (batch %d/%d)", prog.Step, prog.TotalSteps, prog.Percentage, jobReq.ID, index+1, batchTotal)
+		sendEvent(map[string]any{
+			"status":      prog.Status,
+			"step":        prog.Step,
+			"total_steps": prog.TotalSteps,
+			"percentage":  prog.Percentage,
+			"preview":     prog.Preview,
+			"batch_index": index + 1,
+			"batch_total": batchTotal,
+			"prompt":      expandedPrompt,
+		})
 	})
 	if err != nil {
 		return nil, fmt.Errorf("rendering item failed: %w", err)

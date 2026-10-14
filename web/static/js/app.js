@@ -1,10 +1,10 @@
-import { fetchStatus, fetchPresets, fetchGallery, deleteGalleryImages } from './api.js?v=6';
-import { state, clearSelection } from './state.js?v=6';
-import { initGenerator, populatePresets } from './generator.js?v=6';
-import { initGallery, renderGallery, createLiveCard, updateLiveProgress, removeLiveCard } from './gallery.js?v=6';
-import { initExporter, openExportModal } from './exporter.js?v=6';
-import { initLightbox, openLightbox } from './lightbox.js?v=6';
-import { initModelManager, updateModelUI, populateModelsDropdown } from './model_manager.js?v=6';
+import { fetchStatus, fetchPresets, fetchGallery, deleteGalleryImages } from './api.js?v=7';
+import { state, clearSelection } from './state.js?v=7';
+import { initGenerator, populatePresets } from './generator.js?v=7';
+import { initGallery, renderGallery, createLiveCard, updateLiveProgress, removeLiveCard } from './gallery.js?v=7';
+import { initExporter, openExportModal } from './exporter.js?v=7';
+import { initLightbox, openLightbox } from './lightbox.js?v=7';
+import { initModelManager, updateModelUI, populateModelsDropdown } from './model_manager.js?v=7';
 
 function bootStudio() {
   console.log('[GO-SD] Initializing studio components...');
@@ -46,19 +46,31 @@ function initUIComponents() {
   );
 
   initGenerator(
-    (prompt) => {
-      createLiveCard(prompt);
+    (prompt, batchCount) => {
+      createLiveCard(prompt, 1, batchCount || 1);
     },
     (progData) => {
       updateLiveProgress(progData);
     },
-    async (completedImg) => {
-      removeLiveCard();
+    async (completedImg, batchMeta) => {
+      const isBatchEnd = !batchMeta || batchMeta.is_batch_end || (batchMeta.batch_index === batchMeta.batch_total);
+
       try {
         const galleryItems = await fetchGallery();
         state.gallery = galleryItems || [];
-        renderGallery(state.gallery, (img) => openLightbox(img));
-        showToast('Artwork generated and added to showcase!', 'success', 6000);
+
+        if (isBatchEnd) {
+          removeLiveCard();
+          renderGallery(state.gallery, (img) => openLightbox(img));
+          const totalCount = batchMeta ? batchMeta.batch_total : 1;
+          showToast(`Artwork generation complete (${totalCount} item(s) created)!`, 'success', 6000);
+        } else {
+          renderGallery(state.gallery, (img) => openLightbox(img));
+          const nextIndex = (batchMeta.batch_index || 1) + 1;
+          const total = batchMeta.batch_total || 2;
+          createLiveCard(completedImg.prompt || 'Next artwork', nextIndex, total);
+          showToast(`Artwork ${batchMeta.batch_index}/${total} finished. Rendering ${nextIndex}/${total}...`, 'info', 4000);
+        }
       } catch (err) {
         console.error('Failed to reload gallery:', err);
       }
