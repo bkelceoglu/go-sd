@@ -12,12 +12,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Modular CSS Design System -->
-  <link rel="stylesheet" href="/static/css/variables.css?v=11">
-  <link rel="stylesheet" href="/static/css/base.css?v=11">
-  <link rel="stylesheet" href="/static/css/layout.css?v=11">
-  <link rel="stylesheet" href="/static/css/components.css?v=11">
-  <link rel="stylesheet" href="/static/css/modal.css?v=11">
-  <link rel="stylesheet" href="/static/css/animations.css?v=11">
+  <link rel="stylesheet" href="/static/css/variables.css?v=12">
+  <link rel="stylesheet" href="/static/css/base.css?v=12">
+  <link rel="stylesheet" href="/static/css/layout.css?v=12">
+  <link rel="stylesheet" href="/static/css/components.css?v=12">
+  <link rel="stylesheet" href="/static/css/modal.css?v=12">
+  <link rel="stylesheet" href="/static/css/animations.css?v=12">
 </head>
 <body class="studio-body">
   <div class="studio-app">
@@ -36,6 +36,17 @@
       {{ template "model_panel" . }}
     </main>
 
+    <!-- Floating Edge Dock Expand Tabs (Visible when side panels are collapsed) -->
+    <button type="button" id="floatingExpandLeftBtn" class="edge-expand-tab left hidden" title="Expand Prompt Generator Panel (Alt+1)">
+      <span class="tab-arrow">❯</span>
+      <span class="tab-text">Prompt Generator</span>
+    </button>
+
+    <button type="button" id="floatingExpandRightBtn" class="edge-expand-tab right hidden" title="Expand Model Management Studio (Alt+2)">
+      <span class="tab-arrow">❮</span>
+      <span class="tab-text">Model Management</span>
+    </button>
+
     <!-- Modals & Overlays -->
     {{ template "export_modal" . }}
     {{ template "lightbox" . }}
@@ -45,6 +56,6 @@
   </div>
 
   <!-- Modular JavaScript Architecture (ES6 Modules) -->
-  <script type="module" src="/static/js/app.js?v=11"></script>
+  <script type="module" src="/static/js/app.js?v=12"></script>
 </body>
 </html>

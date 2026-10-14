@@ -56,13 +56,50 @@
 .header-status {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-/* Main Split Workspace - Full Browser Width 3-Column Studio Grid */
+/* Header Panel View Toggles */
+.workspace-panel-toggles {
+  display: flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 3px;
+  margin-right: 4px;
+}
+
+.header-view-toggle-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-view-toggle-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.header-view-toggle-btn.active {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+/* Main Split Workspace - Full Browser Width Responsive Studio Flexbox Layout */
 .studio-workspace {
-  display: grid;
-  grid-template-columns: 360px 1fr 400px;
+  display: flex;
   gap: 16px;
   padding: 16px 20px;
   flex: 1;
@@ -71,29 +108,9 @@
   margin: 0;
   box-sizing: border-box;
   min-height: calc(100vh - 64px);
-}
-
-@media (max-width: 1540px) {
-  .studio-workspace {
-    grid-template-columns: 330px 1fr 370px;
-    gap: 12px;
-    padding: 12px 14px;
-  }
-}
-
-@media (max-width: 1220px) {
-  .studio-workspace {
-    grid-template-columns: 320px 1fr;
-  }
-  .model-panel {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 860px) {
-  .studio-workspace {
-    grid-template-columns: 1fr;
-  }
+  position: relative;
+  overflow-x: hidden;
+  transition: gap 0.3s ease;
 }
 
 .panel {
@@ -108,6 +125,84 @@
   position: relative;
 }
 
+/* Left Panel: Generator Parameters */
+.panel.generator-panel {
+  width: 360px;
+  min-width: 360px;
+  flex-shrink: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease,
+              margin 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s ease;
+}
+
+/* Center Panel: Showcase Gallery (Fully Responsive & Auto-Expandable) */
+.panel.gallery-panel {
+  flex: 1;
+  min-width: 0; /* Prevents overflow in flex child */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Right Panel: Model Management Studio */
+.panel.model-panel {
+  width: 400px;
+  min-width: 400px;
+  flex-shrink: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease,
+              margin 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s ease;
+}
+
+/* COLLAPSED STATES */
+.studio-workspace.collapse-left .generator-panel {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  opacity: 0 !important;
+  margin-right: -16px !important;
+  border-width: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+.studio-workspace.collapse-right .model-panel {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  opacity: 0 !important;
+  margin-left: -16px !important;
+  border-width: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+@media (max-width: 1540px) {
+  .panel.generator-panel {
+    width: 320px;
+    min-width: 320px;
+  }
+  .panel.model-panel {
+    width: 360px;
+    min-width: 360px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .studio-workspace {
+    flex-direction: column;
+  }
+  .panel.generator-panel,
+  .panel.model-panel {
+    width: 100%;
+    min-width: 100%;
+  }
+}
+
 .panel-header {
   display: flex;
   align-items: center;
@@ -115,12 +210,14 @@
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-subtle);
+  gap: 10px;
 }
 
 .panel-header-title {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 1;
 }
 
 .panel-title {
@@ -138,4 +235,93 @@
   color: #818cf8;
   border: 1px solid rgba(99, 102, 241, 0.3);
   font-weight: 500;
+}
+
+/* Edge Toggle Button in Panel Headers */
+.panel-edge-toggle-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.panel-edge-toggle-btn:hover {
+  background: rgba(99, 102, 241, 0.2);
+  color: #fff;
+  border-color: rgba(99, 102, 241, 0.4);
+  transform: scale(1.08);
+}
+
+/* Floating Edge Dock Expand Tabs (Visible when panels are collapsed) */
+.edge-expand-tab {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 45;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: var(--text-normal);
+  padding: 14px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: var(--backdrop-blur);
+}
+
+.edge-expand-tab.left {
+  left: 0;
+  border-left: none;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.edge-expand-tab.right {
+  right: 0;
+  border-right: none;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.edge-expand-tab:hover {
+  background: rgba(30, 41, 59, 0.98);
+  color: #fff;
+  border-color: var(--primary-accent);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.35);
+}
+
+.edge-expand-tab .tab-arrow {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-accent);
+  transition: transform 0.2s ease;
+}
+
+.edge-expand-tab:hover .tab-arrow {
+  transform: scale(1.25);
+}
+
+.edge-expand-tab .tab-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.edge-expand-tab:hover .tab-text {
+  color: #fff;
 }

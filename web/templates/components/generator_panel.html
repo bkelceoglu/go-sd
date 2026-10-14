@@ -1,8 +1,13 @@
 {{ define "generator_panel" }}
 <section class="panel generator-panel">
   <div class="panel-header">
-    <h2 class="panel-title">Studio Parameters</h2>
-    <span class="panel-tag">Direct Intel Arc Pipeline</span>
+    <div class="panel-header-title">
+      <h2 class="panel-title">Studio Parameters</h2>
+      <span class="panel-tag">Intel Arc XPU</span>
+    </div>
+    <button type="button" id="collapseLeftBtn" class="panel-edge-toggle-btn" title="Hide Generator Panel (Alt+1)">
+      <span>◀</span>
+    </button>
   </div>
 
   <form id="generatorForm" class="generator-form">

@@ -1,10 +1,11 @@
-import { fetchStatus, fetchPresets, fetchGallery, deleteGalleryImages } from './api.js?v=11';
-import { state, clearSelection } from './state.js?v=11';
-import { initGenerator, populatePresets } from './generator.js?v=11';
-import { initGallery, renderGallery, createLiveCard, updateLiveProgress, removeLiveCard } from './gallery.js?v=11';
-import { initExporter, openExportModal } from './exporter.js?v=11';
-import { initLightbox, openLightbox } from './lightbox.js?v=11';
-import { initModelManager, updateModelUI, populateModelsDropdown } from './model_manager.js?v=11';
+import { fetchStatus, fetchPresets, fetchGallery, deleteGalleryImages } from './api.js?v=12';
+import { state, clearSelection } from './state.js?v=12';
+import { initGenerator, populatePresets } from './generator.js?v=12';
+import { initGallery, renderGallery, createLiveCard, updateLiveProgress, removeLiveCard } from './gallery.js?v=12';
+import { initExporter, openExportModal } from './exporter.js?v=12';
+import { initLightbox, openLightbox } from './lightbox.js?v=12';
+import { initModelManager, updateModelUI, populateModelsDropdown } from './model_manager.js?v=12';
+import { initWorkspaceLayout } from './layout.js?v=12';
 
 function bootStudio() {
   console.log('[GO-SD] Initializing studio components...');
@@ -19,6 +20,7 @@ if (document.readyState === 'loading') {
 }
 
 function initUIComponents() {
+  initWorkspaceLayout();
   const handleImagesDeletion = async (filenames) => {
     try {
       const res = await deleteGalleryImages(filenames);
