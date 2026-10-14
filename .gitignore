@@ -24,3 +24,5 @@ models/*.safetensors
 models/**/*.tmp
 models/*.tmp
 !models/Stable-diffusion/.gitkeep
+models/OpenVINO/*
+!models/OpenVINO/.gitkeep
