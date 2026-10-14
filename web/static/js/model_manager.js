@@ -8,11 +8,14 @@ import {
   downloadHFModel,
   fetchHFDownloadStatus,
   cancelHFDownload
-} from './api.js?v=8';
-import { state } from './state.js?v=8';
+} from './api.js?v=9';
+import { state } from './state.js?v=9';
 
 let isBusy = false;
 let activeTab = 'local';
+let selectedModelPath = '';
+let installedModelsCache = [];
+
 let hfQuery = '';
 let hfPage = 1;
 const hfLimit = 10;
@@ -28,30 +31,31 @@ export function initModelManager(onStatusUpdated, showToastFn) {
   toastCallback = showToastFn;
   statusUpdateCallback = onStatusUpdated;
 
-  // Tab Navigation Buttons
+  // Direct Tab Button Click Handlers
   const tabBtnLocal = document.getElementById('tabBtnLocal');
   const tabBtnHF = document.getElementById('tabBtnHF');
 
   if (tabBtnLocal) {
-    tabBtnLocal.addEventListener('click', () => switchTab('local'));
+    tabBtnLocal.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchTab('local');
+    });
   }
   if (tabBtnHF) {
-    tabBtnHF.addEventListener('click', () => switchTab('hf'));
+    tabBtnHF.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchTab('hf');
+    });
   }
 
-  // Header quick Load / Unload action button
-  const headerActionBtn = document.getElementById('modelActionBtn');
-  if (headerActionBtn) {
-    headerActionBtn.addEventListener('click', async () => {
-      if (isBusy) return;
-      if (state.status && state.status.ready) {
-        await handleUnload(onStatusUpdated, showToastFn);
-      } else {
-        const modelSelect = document.getElementById('modelSelect');
-        const customInput = document.getElementById('customModelInput');
-        const customVal = customInput ? customInput.value.trim() : '';
-        const targetModel = customVal || (modelSelect ? modelSelect.value : '');
-        await handleLoad(targetModel, onStatusUpdated, showToastFn);
+  // Delegated fallback for Tab Bar
+  const tabsNav = document.querySelector('.model-tabs-nav');
+  if (tabsNav) {
+    tabsNav.addEventListener('click', (e) => {
+      const btn = e.target.closest('.model-tab-btn');
+      if (btn) {
+        const tab = btn.getAttribute('data-tab');
+        if (tab) switchTab(tab);
       }
     });
   }
@@ -60,13 +64,7 @@ export function initModelManager(onStatusUpdated, showToastFn) {
   const modelSettingsBtn = document.getElementById('modelSettingsBtn');
   if (modelSettingsBtn) {
     modelSettingsBtn.addEventListener('click', () => {
-      switchTab('local');
-      const panel = document.querySelector('.model-panel');
-      if (panel) {
-        panel.scrollIntoView({ behavior: 'smooth' });
-        panel.style.boxShadow = '0 0 25px rgba(99, 102, 241, 0.4)';
-        setTimeout(() => { panel.style.boxShadow = ''; }, 1200);
-      }
+      focusModelPanel();
     });
   }
 
@@ -77,16 +75,37 @@ export function initModelManager(onStatusUpdated, showToastFn) {
   const modelSelect = document.getElementById('modelSelect');
   const refreshLocalBtn = document.getElementById('refreshLocalModelsBtn');
 
+  // Dropdown change syncs selected card
+  if (modelSelect) {
+    modelSelect.addEventListener('change', () => {
+      selectedModelPath = modelSelect.value;
+      if (customInput) customInput.value = '';
+      updateCardsSelection();
+    });
+  }
+
+  // Custom path input change syncs selection
+  if (customInput) {
+    customInput.addEventListener('input', () => {
+      if (customInput.value.trim().length > 0) {
+        selectedModelPath = customInput.value.trim();
+        updateCardsSelection();
+      }
+    });
+  }
+
+  // Load Model Action (Auto-unloads previous model if one is active)
   if (modalLoadBtn) {
     modalLoadBtn.addEventListener('click', async () => {
       if (isBusy) return;
       const customVal = customInput ? customInput.value.trim() : '';
       const selectedVal = modelSelect ? modelSelect.value : '';
-      const targetModel = customVal || selectedVal;
+      const targetModel = customVal || selectedModelPath || selectedVal;
       await handleLoad(targetModel, onStatusUpdated, showToastFn);
     });
   }
 
+  // Manual Unload Action
   if (modalUnloadBtn) {
     modalUnloadBtn.addEventListener('click', async () => {
       if (isBusy) return;
@@ -94,6 +113,7 @@ export function initModelManager(onStatusUpdated, showToastFn) {
     });
   }
 
+  // Refresh Local Models
   if (refreshLocalBtn) {
     refreshLocalBtn.addEventListener('click', () => {
       refreshModelsList();
@@ -105,7 +125,7 @@ export function initModelManager(onStatusUpdated, showToastFn) {
   initHFHubControls();
 }
 
-function switchTab(tab) {
+export function switchTab(tab) {
   activeTab = tab;
   const tabBtnLocal = document.getElementById('tabBtnLocal');
   const tabBtnHF = document.getElementById('tabBtnHF');
@@ -129,6 +149,19 @@ function switchTab(tab) {
   }
 }
 
+export function focusModelPanel() {
+  switchTab('local');
+  const panel = document.querySelector('.model-panel');
+  if (panel) {
+    panel.scrollIntoView({ behavior: 'smooth' });
+    panel.style.boxShadow = '0 0 25px rgba(99, 102, 241, 0.4)';
+    setTimeout(() => { panel.style.boxShadow = ''; }, 1200);
+  }
+}
+
+// Backwards compatibility alias for generator and modal references
+export const openModelModal = focusModelPanel;
+
 // ==========================================
 // LOCAL MODELS (TAB 1)
 // ==========================================
@@ -136,13 +169,15 @@ function switchTab(tab) {
 export async function refreshModelsList() {
   try {
     const models = await fetchModels();
-    populateModelsDropdown(models);
+    installedModelsCache = models || [];
+    populateModelsDropdown(installedModelsCache);
   } catch (err) {
     console.warn('[MODEL MGR] Failed to scan models:', err);
   }
 }
 
 export function populateModelsDropdown(models) {
+  installedModelsCache = models || [];
   const select = document.getElementById('modelSelect');
   const countBadge = document.getElementById('installedCountBadge');
   const container = document.getElementById('installedModelsList');
@@ -151,6 +186,7 @@ export function populateModelsDropdown(models) {
     countBadge.textContent = `${models ? models.length : 0} detected`;
   }
 
+  // Populate Select Dropdown
   if (select) {
     select.innerHTML = '';
     if (!models || models.length === 0) {
@@ -162,14 +198,23 @@ export function populateModelsDropdown(models) {
       models.forEach((m) => {
         const opt = document.createElement('option');
         opt.value = m.path;
-        opt.textContent = `${m.name} (${m.size_gb} GB)${m.is_active ? ' — Active' : ''}`;
-        if (m.is_active) opt.selected = true;
+        opt.textContent = `${m.name} (${m.size_gb} GB)${m.is_active ? ' — In VRAM' : ''}`;
+        if (m.is_active) {
+          opt.selected = true;
+          selectedModelPath = m.path;
+        }
         select.appendChild(opt);
       });
+
+      // Default selection if none active
+      if (!selectedModelPath && models.length > 0) {
+        selectedModelPath = models[0].path;
+        select.value = models[0].path;
+      }
     }
   }
 
-  // Render cards in installed models list
+  // Render clickable model cards
   if (container) {
     container.innerHTML = '';
     if (!models || models.length === 0) {
@@ -181,48 +226,85 @@ export function populateModelsDropdown(models) {
     }
 
     models.forEach((m) => {
+      const isSelected = (selectedModelPath === m.path);
       const card = document.createElement('div');
-      card.className = `installed-card ${m.is_active ? 'active-model' : ''}`;
+      card.className = `installed-card ${m.is_active ? 'active-model' : ''} ${isSelected ? 'selected-model' : ''}`;
+      card.setAttribute('data-path', m.path);
 
       const origin = m.path.includes('sdnext') ? 'SD.Next' : 'models/Stable-diffusion';
 
       card.innerHTML = `
-        <div class="installed-card-info">
-          <span class="installed-card-title" title="${m.path}">${m.name}</span>
-          <div class="installed-card-meta">
-            <span class="meta-pill">${m.size_gb} GB</span>
-            <span class="meta-pill">${origin}</span>
+        <div class="installed-card-left">
+          <span class="selection-indicator ${isSelected ? 'checked' : ''}">${isSelected ? '◉' : '○'}</span>
+          <div class="installed-card-info">
+            <span class="installed-card-title" title="${m.path}">${m.name}</span>
+            <div class="installed-card-meta">
+              <span class="meta-pill">${m.size_gb} GB</span>
+              <span class="meta-pill">${origin}</span>
+            </div>
           </div>
         </div>
         <div class="installed-card-action">
           ${m.is_active
-            ? `<span class="card-badge-active">● Active</span>`
-            : `<button type="button" class="btn-card-load" data-path="${m.path}">⚡ Load</button>`
+            ? `<span class="card-badge-active">● In VRAM</span>`
+            : isSelected
+              ? `<span class="card-badge-selected">Selected</span>`
+              : `<span class="card-badge-idle">Select</span>`
           }
         </div>
       `;
 
-      const loadBtn = card.querySelector('.btn-card-load');
-      if (loadBtn) {
-        loadBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          if (isBusy) return;
-          await handleLoad(m.path, statusUpdateCallback, toastCallback);
-        });
-      }
+      // Clicking any card selects it
+      card.addEventListener('click', () => {
+        selectedModelPath = m.path;
+        if (select) select.value = m.path;
+        const customInput = document.getElementById('customModelInput');
+        if (customInput) customInput.value = '';
+        updateCardsSelection();
+      });
 
       container.appendChild(card);
     });
   }
 }
 
+function updateCardsSelection() {
+  const container = document.getElementById('installedModelsList');
+  if (!container) return;
+
+  const cards = container.querySelectorAll('.installed-card');
+  cards.forEach((card) => {
+    const path = card.getAttribute('data-path');
+    const isSelected = (path === selectedModelPath);
+    const indicator = card.querySelector('.selection-indicator');
+    const actionEl = card.querySelector('.installed-card-action');
+
+    if (isSelected) {
+      card.classList.add('selected-model');
+      if (indicator) {
+        indicator.textContent = '◉';
+        indicator.classList.add('checked');
+      }
+      if (actionEl && !card.classList.contains('active-model')) {
+        actionEl.innerHTML = `<span class="card-badge-selected">Selected</span>`;
+      }
+    } else {
+      card.classList.remove('selected-model');
+      if (indicator) {
+        indicator.textContent = '○';
+        indicator.classList.remove('checked');
+      }
+      if (actionEl && !card.classList.contains('active-model')) {
+        actionEl.innerHTML = `<span class="card-badge-idle">Select</span>`;
+      }
+    }
+  });
+}
+
 export function updateModelUI(status) {
   const deviceBadge = document.getElementById('deviceBadge');
   const deviceText = document.getElementById('deviceText');
   const modelText = document.getElementById('modelText');
-  const headerActionBtn = document.getElementById('modelActionBtn');
-  const headerActionIcon = document.getElementById('modelActionIcon');
-  const headerActionText = document.getElementById('modelActionText');
 
   const panelStatusDot = document.getElementById('panelModelStatusDot');
   const panelStatusText = document.getElementById('panelModelStatusText');
@@ -243,13 +325,6 @@ export function updateModelUI(status) {
     if (panelStatusDot) {
       panelStatusDot.className = 'status-indicator active';
       if (panelStatusText) panelStatusText.textContent = 'Active (In VRAM)';
-    }
-
-    if (headerActionBtn) {
-      headerActionBtn.className = 'btn-model-action unload';
-      headerActionBtn.title = 'Unload model & free GPU memory';
-      if (headerActionIcon) headerActionIcon.textContent = '🧹';
-      if (headerActionText) headerActionText.textContent = 'Unload';
     }
 
     if (modalStatusBadge) {
@@ -280,13 +355,6 @@ export function updateModelUI(status) {
       if (panelStatusText) panelStatusText.textContent = 'Standby (0 MB)';
     }
 
-    if (headerActionBtn) {
-      headerActionBtn.className = 'btn-model-action load';
-      headerActionBtn.title = 'Load model into GPU VRAM';
-      if (headerActionIcon) headerActionIcon.textContent = '⚡';
-      if (headerActionText) headerActionText.textContent = 'Load Model';
-    }
-
     if (modalStatusBadge) {
       modalStatusBadge.className = 'telemetry-badge standby';
       modalStatusBadge.textContent = 'Standby (0 MB VRAM)';
@@ -305,16 +373,42 @@ export function updateModelUI(status) {
   }
 }
 
+// Loads a model. If another model is already active in VRAM, it automatically unloads it first!
 async function handleLoad(modelPath, onStatusUpdated, showToastFn) {
+  if (!modelPath) {
+    if (showToastFn) showToastFn('Please select a checkpoint first.', 'warning', 4000);
+    return;
+  }
+
   isBusy = true;
-  setControlsBusy(true, 'Loading Model...');
-  showProgressBars(true, 'Initializing diffusion worker...', 5);
+  setControlsBusy(true, 'Preparing Model...');
+  showProgressBars(true, 'Preparing engine...', 5);
+
+  // Auto-Unload: if a model is currently active, purge VRAM first before loading new checkpoint!
+  if (state.status && state.status.ready) {
+    updateProgressDisplay('Unloading previous model & purging GPU memory...', 15);
+    try {
+      await unloadModelStream(
+        (prog) => updateProgressDisplay(prog.message || 'Flushing GPU VRAM...', 20),
+        () => updateProgressDisplay('VRAM cleared. Loading selected model...', 30),
+        (err) => console.warn('Pre-unload step warning:', err)
+      );
+      state.status.ready = false;
+      state.status.model = '';
+      updateModelUI(state.status);
+    } catch (err) {
+      console.warn('Pre-unload error, continuing with load:', err);
+    }
+  }
+
+  // Load the newly selected model
+  updateProgressDisplay('Initializing diffusion worker...', 35);
 
   try {
     await loadModelStream(
       modelPath,
       (prog) => {
-        const pct = prog.percentage || 10;
+        const pct = prog.percentage || 40;
         const msg = prog.message || 'Loading checkpoint components...';
         updateProgressDisplay(msg, pct);
       },
@@ -398,22 +492,17 @@ async function handleUnload(onStatusUpdated, showToastFn) {
 }
 
 function setControlsBusy(busy, text = '') {
-  const headerActionBtn = document.getElementById('modelActionBtn');
-  const headerActionText = document.getElementById('modelActionText');
   const modalLoadBtn = document.getElementById('modalLoadBtn');
+  const modalLoadBtnText = document.getElementById('modalLoadBtnText');
   const modalUnloadBtn = document.getElementById('modalUnloadBtn');
   const genBtn = document.getElementById('generateBtn');
 
-  if (headerActionBtn) {
-    if (busy) {
-      headerActionBtn.classList.add('loading');
-      if (headerActionText) headerActionText.textContent = text;
-    } else {
-      headerActionBtn.classList.remove('loading');
+  if (modalLoadBtn) {
+    modalLoadBtn.disabled = busy;
+    if (modalLoadBtnText) {
+      modalLoadBtnText.textContent = busy ? text : 'Load Model';
     }
   }
-
-  if (modalLoadBtn) modalLoadBtn.disabled = busy;
   if (modalUnloadBtn) modalUnloadBtn.disabled = busy;
 
   if (genBtn) {
@@ -707,7 +796,7 @@ async function handleStartHFDownload(repoID, filename) {
       toastCallback(`Download started: ${filename} saving to models/Stable-diffusion/`, 'info', 5000);
     }
 
-    // Replace the row with the progress widget immediately
+    // Replace the row with progress widget
     const rowEl = document.getElementById(`row_${sanitizeDomId(taskKey)}`);
     if (rowEl) {
       rowEl.outerHTML = renderProgressWidgetHtml(taskKey, filename, task);

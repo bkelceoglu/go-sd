@@ -1,6 +1,6 @@
-import { generateArtStream } from './api.js?v=8';
-import { state, emit } from './state.js?v=8';
-import { openModelModal } from './model_manager.js?v=8';
+import { generateArtStream } from './api.js?v=9';
+import { state, emit } from './state.js?v=9';
+import { focusModelPanel, openModelModal } from './model_manager.js?v=9';
 
 export function initGenerator(onStart, onProgress, onSuccess, onError) {
   const form = document.getElementById('generatorForm');
@@ -58,7 +58,7 @@ export function initGenerator(onStart, onProgress, onSuccess, onError) {
 
     if (!state.status || !state.status.ready) {
       if (onError) onError('Model is in standby mode. Please click "⚡ Load Model" to activate the GPU engine.');
-      openModelModal();
+      focusModelPanel();
       return;
     }
 

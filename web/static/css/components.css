@@ -910,7 +910,54 @@ input[type="range"] {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  cursor: pointer;
   transition: var(--transition-fast);
+}
+
+.installed-card.selected-model {
+  border-color: rgba(99, 102, 241, 0.7);
+  background: rgba(99, 102, 241, 0.12);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+}
+
+.installed-card-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.selection-indicator {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1;
+}
+
+.selection-indicator.checked {
+  color: #818cf8;
+}
+
+.card-badge-selected {
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  background: rgba(99, 102, 241, 0.25);
+  color: #c7d2fe;
+  border: 1px solid rgba(99, 102, 241, 0.5);
+  white-space: nowrap;
+}
+
+.card-badge-idle {
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  border: 1px solid transparent;
+  white-space: nowrap;
 }
 
 .installed-card:hover {
