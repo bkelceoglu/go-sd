@@ -417,7 +417,7 @@ func (m *Manager) ScanAvailableModels(modelsDir string) []ModelInfo {
 	isReady := m.isReady && m.cmd != nil && m.cmd.Process != nil
 	m.mu.Unlock()
 
-	searchDirs := []string{modelsDir, "/home/caveman/sdnext/models/Stable-diffusion", "models"}
+	searchDirs := []string{modelsDir, "/home/caveman/sdnext/models/Stable-diffusion", "models/Stable-diffusion", "models"}
 	seenPaths := make(map[string]bool)
 	var models []ModelInfo
 

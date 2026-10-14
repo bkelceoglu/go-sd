@@ -12,29 +12,31 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Modular CSS Design System -->
-  <link rel="stylesheet" href="/static/css/variables.css?v=7">
-  <link rel="stylesheet" href="/static/css/base.css?v=7">
-  <link rel="stylesheet" href="/static/css/layout.css?v=7">
-  <link rel="stylesheet" href="/static/css/components.css?v=7">
-  <link rel="stylesheet" href="/static/css/modal.css?v=7">
-  <link rel="stylesheet" href="/static/css/animations.css?v=7">
+  <link rel="stylesheet" href="/static/css/variables.css?v=8">
+  <link rel="stylesheet" href="/static/css/base.css?v=8">
+  <link rel="stylesheet" href="/static/css/layout.css?v=8">
+  <link rel="stylesheet" href="/static/css/components.css?v=8">
+  <link rel="stylesheet" href="/static/css/modal.css?v=8">
+  <link rel="stylesheet" href="/static/css/animations.css?v=8">
 </head>
 <body class="studio-body">
   <div class="studio-app">
     <!-- Modular Header Component -->
     {{ template "header" . }}
 
-    <!-- Main Workspace Split Layout -->
+    <!-- Main Workspace 3-Column Studio Layout -->
     <main class="studio-workspace">
-      <!-- Left: Generator Sidebar Panel -->
+      <!-- Left: Generator Parameters Panel -->
       {{ template "generator_panel" . }}
 
-      <!-- Right: Asset Showcase & Packaging Panel -->
+      <!-- Center: Asset Showcase & Canvas Gallery Panel -->
       {{ template "gallery_panel" . }}
+
+      <!-- Right: Model Management Studio Panel (Local & HuggingFace Hub) -->
+      {{ template "model_panel" . }}
     </main>
 
     <!-- Modals & Overlays -->
-    {{ template "model_modal" . }}
     {{ template "export_modal" . }}
     {{ template "lightbox" . }}
 
@@ -43,6 +45,6 @@
   </div>
 
   <!-- Modular JavaScript Architecture (ES6 Modules) -->
-  <script type="module" src="/static/js/app.js?v=7"></script>
+  <script type="module" src="/static/js/app.js?v=8"></script>
 </body>
 </html>

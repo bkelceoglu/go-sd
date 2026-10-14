@@ -183,3 +183,46 @@ export async function exportBundle(payload) {
   }
   return res.json();
 }
+
+export async function searchHFModels(query = '', page = 1, limit = 10) {
+  const params = new URLSearchParams({
+    q: query,
+    page: String(page),
+    limit: String(limit)
+  });
+  const res = await fetch(`/api/hf/search?${params.toString()}`);
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `HuggingFace search failed with status ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function downloadHFModel(repoId, filename) {
+  const res = await fetch('/api/hf/download', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repo_id: repoId, filename })
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `HuggingFace download failed with status ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchHFDownloadStatus() {
+  const res = await fetch('/api/hf/download/status');
+  if (!res.ok) throw new Error('Failed to fetch download status');
+  return res.json();
+}
+
+export async function cancelHFDownload(taskId) {
+  const res = await fetch('/api/hf/download/cancel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ task_id: taskId })
+  });
+  if (!res.ok) throw new Error('Failed to cancel download');
+  return res.json();
+}

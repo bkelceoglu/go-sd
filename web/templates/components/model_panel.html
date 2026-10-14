@@ -1,0 +1,155 @@
+{{ define "model_panel" }}
+<section class="panel model-panel">
+  <div class="panel-header">
+    <div class="panel-header-title">
+      <h2 class="panel-title">Model Management</h2>
+      <span class="panel-tag" id="panelModelDeviceTag">Intel Arc XPU</span>
+    </div>
+    <!-- Model Active Dot Indicator -->
+    <div id="panelModelStatusDot" class="status-indicator standby" title="Diffusion Engine State">
+      <span class="dot"></span>
+      <span id="panelModelStatusText" class="status-label">Standby</span>
+    </div>
+  </div>
+
+  <!-- Tab Bar Navigation -->
+  <div class="model-tabs-nav">
+    <button type="button" id="tabBtnLocal" class="model-tab-btn active" data-tab="local">
+      <span class="tab-icon">💾</span>
+      <span>Installed Models</span>
+    </button>
+    <button type="button" id="tabBtnHF" class="model-tab-btn" data-tab="hf">
+      <span class="tab-icon">🤗</span>
+      <span>HuggingFace Hub</span>
+    </button>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- TAB 1: LOCAL CHECKPOINTS (ACTIVATE / DEACTIVATE) -->
+  <!-- ============================================== -->
+  <div id="tabContentLocal" class="model-tab-content active">
+    <!-- GPU Telemetry Card -->
+    <div class="telemetry-card">
+      <div class="telemetry-item">
+        <span class="telemetry-label">Engine Status</span>
+        <span id="modalStatusBadge" class="telemetry-badge standby">Standby (0 MB VRAM)</span>
+      </div>
+      <div class="telemetry-item">
+        <span class="telemetry-label">Compute Device</span>
+        <span id="modalDeviceText" class="telemetry-value">Intel Arc XPU (IPEX)</span>
+      </div>
+      <div class="telemetry-item">
+        <span class="telemetry-label">Active Model</span>
+        <span id="modalActiveModelText" class="telemetry-value highlight">None</span>
+      </div>
+    </div>
+
+    <!-- Active Loading Progress Box (Streams step-by-step progress when loading/unloading) -->
+    <div id="modelProgressContainer" class="model-progress-box hidden">
+      <div class="model-progress-header">
+        <span id="modelProgressMsg" class="model-progress-msg">Initializing worker...</span>
+        <span id="modelProgressPct" class="model-progress-pct">0%</span>
+      </div>
+      <div class="model-progress-track">
+        <div id="modelProgressBar" class="model-progress-fill" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Quick Switcher Dropdown -->
+    <div class="form-group">
+      <div class="label-row">
+        <label for="modelSelect">Select SDXL Checkpoint</label>
+        <button type="button" id="refreshLocalModelsBtn" class="mini-icon-btn" title="Rescan local models">🔄</button>
+      </div>
+      <div class="select-wrapper">
+        <select id="modelSelect" class="form-select">
+          <option value="">Scanning models...</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Custom Checkpoint Path -->
+    <div class="form-group">
+      <label for="customModelInput">Or Custom Checkpoint Path</label>
+      <input
+        type="text"
+        id="customModelInput"
+        placeholder="/home/caveman/sdnext/models/Stable-diffusion/custom.safetensors"
+        class="form-input text-xs"
+      >
+    </div>
+
+    <!-- Action Buttons Bar -->
+    <div class="panel-actions-row">
+      <button type="button" id="modalLoadBtn" class="btn-primary flex-1">
+        <span class="action-icon">⚡</span>
+        <span id="modalLoadBtnText">Load Model</span>
+      </button>
+      <button type="button" id="modalUnloadBtn" class="btn-secondary btn-danger-subtle" title="Unload and flush Intel Arc VRAM">
+        <span class="action-icon">🧹</span>
+        <span>Unload</span>
+      </button>
+    </div>
+
+    <!-- Installed Models List -->
+    <div class="installed-models-section">
+      <div class="section-title-row">
+        <span class="section-subtitle">Installed Safetensors</span>
+        <span id="installedCountBadge" class="mini-badge">0 detected</span>
+      </div>
+      <div id="installedModelsList" class="installed-cards-container">
+        <!-- Rendered dynamically via model_manager.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- TAB 2: HUGGINGFACE HUB SEARCH & DOWNLOADER    -->
+  <!-- ============================================== -->
+  <div id="tabContentHF" class="model-tab-content">
+    <!-- HF Search Box -->
+    <div class="hf-search-container">
+      <div class="hf-search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          id="hfSearchInput"
+          class="form-input hf-search-input"
+          placeholder="Search SDXL models (e.g. juggernaut, lightning, realistic)..."
+        >
+        <button type="button" id="hfClearSearchBtn" class="clear-btn hidden" title="Clear search">✕</button>
+      </div>
+      <button type="button" id="hfSearchBtn" class="btn-subtle btn-search-go">Search</button>
+    </div>
+
+    <!-- HF Category Filter Chips -->
+    <div class="hf-filter-chips">
+      <button type="button" class="chip active" data-query="">⚡ Latest</button>
+      <button type="button" class="chip" data-query="sdxl lightning">⚡ Lightning</button>
+      <button type="button" class="chip" data-query="sdxl turbo">🚀 Turbo</button>
+      <button type="button" class="chip" data-query="realistic sdxl">📸 Photo</button>
+      <button type="button" class="chip" data-query="animagine xl">🎨 Anime</button>
+    </div>
+
+    <!-- Storage Path Information -->
+    <div class="hf-storage-hint">
+      <span>📁 Target Folder: <code>models/Stable-diffusion/</code></span>
+    </div>
+
+    <!-- Model Cards List Container -->
+    <div id="hfModelList" class="hf-models-list">
+      <div class="hf-loading-state">
+        <div class="btn-spinner"></div>
+        <span>Fetching latest SDXL models from HuggingFace...</span>
+      </div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div id="hfPagination" class="hf-pagination">
+      <button type="button" id="hfPrevPageBtn" class="btn-page" disabled>← Prev</button>
+      <span id="hfPageIndicator" class="page-indicator">Page 1 of 1</span>
+      <button type="button" id="hfNextPageBtn" class="btn-page" disabled>Next →</button>
+    </div>
+  </div>
+</section>
+{{ end }}

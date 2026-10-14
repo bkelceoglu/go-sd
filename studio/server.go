@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,9 +20,10 @@ import (
 
 // Server coordinates HTTP routing, template rendering, and API execution.
 type Server struct {
-	manager   *engine.Manager
-	exporter  *Exporter
-	webDir    string
+	manager    *engine.Manager
+	exporter   *Exporter
+	downloader *HFDownloader
+	webDir     string
 	outputDir string
 	tmpl      *template.Template
 }
@@ -41,12 +43,17 @@ func NewServer(mgr *engine.Manager, exp *Exporter, webDir, outDir string) (*Serv
 		return nil, fmt.Errorf("parsing layout template failed: %w", err)
 	}
 
+	rootDir := filepath.Dir(webDir)
+	modelsDir := filepath.Join(rootDir, "models", "Stable-diffusion")
+	downloader := NewHFDownloader(modelsDir)
+
 	srv := &Server{
-		manager:   mgr,
-		exporter:  exp,
-		webDir:    webDir,
-		outputDir: outDir,
-		tmpl:      tmpl,
+		manager:    mgr,
+		exporter:   exp,
+		downloader: downloader,
+		webDir:     webDir,
+		outputDir:  outDir,
+		tmpl:       tmpl,
 	}
 	return srv, nil
 }
@@ -64,6 +71,10 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/gallery", s.handleGalleryDelete)
 	mux.HandleFunc("POST /api/generate", s.handleGenerate)
 	mux.HandleFunc("POST /api/export", s.handleExport)
+	mux.HandleFunc("GET /api/hf/search", s.handleHFSearch)
+	mux.HandleFunc("POST /api/hf/download", s.handleHFDownload)
+	mux.HandleFunc("GET /api/hf/download/status", s.handleHFDownloadStatus)
+	mux.HandleFunc("POST /api/hf/download/cancel", s.handleHFDownloadCancel)
 
 	// Static assets with no-cache headers for instant updates
 	staticDir := filepath.Join(s.webDir, "static")
@@ -498,4 +509,61 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
+}
+
+
+func (s *Server) handleHFSearch(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("q")
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+
+	res, err := s.downloader.Search(r.Context(), q, page, limit)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, res)
+}
+
+func (s *Server) handleHFDownload(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		RepoID   string `json:"repo_id"`
+		Filename string `json:"filename"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json payload"})
+		return
+	}
+	if req.RepoID == "" || req.Filename == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "repo_id and filename are required"})
+		return
+	}
+	if !strings.HasSuffix(strings.ToLower(req.Filename), ".safetensors") {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "only .safetensors files can be downloaded"})
+		return
+	}
+
+	task, err := s.downloader.StartDownload(req.RepoID, req.Filename)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusAccepted, task)
+}
+
+func (s *Server) handleHFDownloadStatus(w http.ResponseWriter, r *http.Request) {
+	tasks := s.downloader.GetTasks()
+	writeJSON(w, http.StatusOK, tasks)
+}
+
+func (s *Server) handleHFDownloadCancel(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		TaskID string `json:"task_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json payload"})
+		return
+	}
+	cancelled := s.downloader.CancelDownload(req.TaskID)
+	writeJSON(w, http.StatusOK, map[string]bool{"cancelled": cancelled})
 }
