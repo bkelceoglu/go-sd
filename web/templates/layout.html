@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GO-SD Studio — Commercial AI Art & Multi-Platform Exporter</title>
+  <meta name="description" content="Commercial quality AI digital art production studio running directly on Intel Arc GPU with automated multi-platform packaging for Etsy, Shopify, and Gumroad.">
+
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Modular CSS Design System -->
+  <link rel="stylesheet" href="/static/css/variables.css?v=6">
+  <link rel="stylesheet" href="/static/css/base.css?v=6">
+  <link rel="stylesheet" href="/static/css/layout.css?v=6">
+  <link rel="stylesheet" href="/static/css/components.css?v=6">
+  <link rel="stylesheet" href="/static/css/modal.css?v=6">
+  <link rel="stylesheet" href="/static/css/animations.css?v=6">
+</head>
+<body class="studio-body">
+  <div class="studio-app">
+    <!-- Modular Header Component -->
+    {{ template "header" . }}
+
+    <!-- Main Workspace Split Layout -->
+    <main class="studio-workspace">
+      <!-- Left: Generator Sidebar Panel -->
+      {{ template "generator_panel" . }}
+
+      <!-- Right: Asset Showcase & Packaging Panel -->
+      {{ template "gallery_panel" . }}
+    </main>
+
+    <!-- Modals & Overlays -->
+    {{ template "model_modal" . }}
+    {{ template "export_modal" . }}
+    {{ template "lightbox" . }}
+
+    <!-- Notification Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+  </div>
+
+  <!-- Modular JavaScript Architecture (ES6 Modules) -->
+  <script type="module" src="/static/js/app.js?v=6"></script>
+</body>
+</html>

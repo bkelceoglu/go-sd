@@ -1,0 +1,115 @@
+{{ define "generator_panel" }}
+<section class="panel generator-panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Studio Parameters</h2>
+    <span class="panel-tag">Direct Intel Arc Pipeline</span>
+  </div>
+
+  <form id="generatorForm" class="generator-form">
+    <!-- Prompt Input -->
+    <div class="form-group">
+      <div class="label-row">
+        <label for="promptInput">Subject Prompt</label>
+        <span class="hint-pill" title="Use {red|blue} for automatic random combinatorial variations">Wildcards {A|B} Supported</span>
+      </div>
+      <textarea
+        id="promptInput"
+        name="prompt"
+        rows="3"
+        placeholder="e.g. armored dire wolf with broadsword, or cute {baby dragon|little fox|panda cub} reading ancient spellbook..."
+        required
+      >armored dire wolf with broadsword</textarea>
+    </div>
+
+    <!-- Style Preset Selector -->
+    <div class="form-group">
+      <label for="presetSelect">Commercial Style Preset</label>
+      <div class="select-wrapper">
+        <select id="presetSelect" name="preset_id">
+          <!-- Populated dynamically via /api/presets -->
+        </select>
+      </div>
+      <div id="presetSuffixPreview" class="preset-preview-text"></div>
+    </div>
+
+    <!-- Negative Prompt (Collapsible) -->
+    <details class="accordion-group">
+      <summary class="accordion-summary">Negative Prompt & Constraints</summary>
+      <div class="accordion-content">
+        <textarea
+          id="negativePromptInput"
+          name="negative_prompt"
+          rows="2"
+          placeholder="Unwanted elements (blurry, watermark, text...)"
+        ></textarea>
+      </div>
+    </details>
+
+    <!-- Canvas Dimensions -->
+    <div class="form-group">
+      <label>Canvas Resolution</label>
+      <div class="dimension-selector">
+        <button type="button" class="dim-btn active" data-w="1024" data-h="1024">
+          <span class="dim-ratio">1:1</span>
+          <span class="dim-size">1024x1024</span>
+        </button>
+        <button type="button" class="dim-btn" data-w="832" data-h="1216">
+          <span class="dim-ratio">2:3</span>
+          <span class="dim-size">832x1216</span>
+        </button>
+        <button type="button" class="dim-btn" data-w="1216" data-h="832">
+          <span class="dim-ratio">3:2</span>
+          <span class="dim-size">1216x832</span>
+        </button>
+      </div>
+      <input type="hidden" id="widthInput" name="width" value="1024">
+      <input type="hidden" id="heightInput" name="height" value="1024">
+    </div>
+
+    <!-- Batch Count & Randomness -->
+    <div class="form-row">
+      <div class="form-group flex-1">
+        <label for="batchCountSelect">Batch Quantity</label>
+        <select id="batchCountSelect" name="batch_count">
+          <option value="1" selected>1 Image</option>
+          <option value="2">2 Variations</option>
+          <option value="4">4 Bundle Set</option>
+          <option value="8">8 Collection</option>
+        </select>
+      </div>
+      <div class="form-group flex-1">
+        <label for="seedInput">Seed (-1 = Random)</label>
+        <div class="input-with-button">
+          <input type="number" id="seedInput" name="seed" value="-1" step="1">
+          <button type="button" id="randomSeedBtn" class="mini-btn" title="Randomize Seed">🎲</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fine Tuning Sliders -->
+    <div class="sliders-section">
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>Inference Steps</span>
+          <span id="stepsVal">20</span>
+        </div>
+        <input type="range" id="stepsInput" name="steps" min="10" max="40" value="20" step="1">
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>Guidance (CFG Scale)</span>
+          <span id="cfgVal">6.0</span>
+        </div>
+        <input type="range" id="cfgInput" name="cfg_scale" min="3.0" max="12.0" value="6.0" step="0.5">
+      </div>
+    </div>
+
+    <!-- Action Button -->
+    <button type="submit" id="generateBtn" class="btn-primary">
+      <span class="btn-spinner hidden" id="genSpinner"></span>
+      <span class="btn-text" id="genBtnText">✨ Generate Artwork</span>
+    </button>
+  </form>
+</section>
+{{ end }}

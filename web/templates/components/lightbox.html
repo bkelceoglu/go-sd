@@ -1,0 +1,35 @@
+{{ define "lightbox" }}
+<div id="lightboxModal" class="lightbox-overlay hidden">
+  <div class="lightbox-dialog">
+    <button type="button" id="closeLightboxBtn" class="lightbox-close">&times;</button>
+    <div class="lightbox-media">
+      <img id="lightboxImg" src="" alt="Artwork Full View">
+    </div>
+    <div class="lightbox-details">
+      <h4 id="lightboxPrompt" class="lightbox-prompt"></h4>
+      <div class="lightbox-meta">
+        <span id="lightboxResolution" class="meta-item"></span>
+        <span id="lightboxSeed" class="meta-item"></span>
+        <span id="lightboxTime" class="meta-item"></span>
+      </div>
+      <div class="lightbox-actions">
+        <a id="lightboxDownloadBtn" class="btn-primary" href="" download>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Download Original JPG
+        </a>
+        <button type="button" id="lightboxDeleteBtn" class="btn-danger-subtle">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          Delete Artwork
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}

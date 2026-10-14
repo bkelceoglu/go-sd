@@ -1,0 +1,76 @@
+{{ define "model_modal" }}
+<div id="modelModal" class="modal-overlay hidden">
+  <div class="modal-container model-modal-container">
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <h3 class="modal-title">Model & GPU Memory Manager</h3>
+        <p class="modal-subtitle">Fast on-demand checkpoint loading and Intel Arc GPU VRAM reclamation.</p>
+      </div>
+      <button type="button" id="closeModelModalBtn" class="modal-close-btn">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Device & Memory Telemetry Card -->
+      <div class="telemetry-card">
+        <div class="telemetry-item">
+          <span class="telemetry-label">Status</span>
+          <span id="modalStatusBadge" class="telemetry-badge standby">Standby</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="telemetry-label">Compute Device</span>
+          <span id="modalDeviceText" class="telemetry-value">Intel Arc XPU (IPEX)</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="telemetry-label">Loaded Checkpoint</span>
+          <span id="modalActiveModelText" class="telemetry-value highlight">None (0 MB VRAM)</span>
+        </div>
+      </div>
+
+      <!-- Checkpoint Model Selector -->
+      <div class="form-group">
+        <label for="modelSelect">Select SDXL Model (.safetensors)</label>
+        <div class="select-wrapper">
+          <select id="modelSelect" class="form-select">
+            <option value="">Scanning models...</option>
+          </select>
+        </div>
+        <span class="hint-pill-sub">Auto-detects models from SD.Next and local directory.</span>
+      </div>
+
+      <!-- Custom Path (Optional) -->
+      <div class="form-group">
+        <label for="customModelInput">Or Custom Checkpoint Path</label>
+        <input
+          type="text"
+          id="customModelInput"
+          placeholder="/home/caveman/sdnext/models/Stable-diffusion/custom.safetensors"
+          class="form-input"
+        >
+      </div>
+
+      <!-- Live Loading / Unloading Progress Box -->
+      <div id="modelProgressContainer" class="model-progress-box hidden">
+        <div class="model-progress-header">
+          <span id="modelProgressMsg" class="model-progress-msg">Initializing worker...</span>
+          <span id="modelProgressPct" class="model-progress-pct">0%</span>
+        </div>
+        <div class="model-progress-track">
+          <div id="modelProgressBar" class="model-progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Actions Bar -->
+      <div class="modal-actions-bar">
+        <button type="button" id="modalUnloadBtn" class="btn-secondary btn-danger-subtle">
+          <span class="action-icon">🧹</span>
+          <span>Unload & Free Memory</span>
+        </button>
+        <button type="button" id="modalLoadBtn" class="btn-primary btn-load-primary">
+          <span class="action-icon">⚡</span>
+          <span id="modalLoadBtnText">Load Model</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}
