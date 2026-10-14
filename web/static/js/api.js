@@ -226,3 +226,12 @@ export async function cancelHFDownload(taskId) {
   if (!res.ok) throw new Error('Failed to cancel download');
   return res.json();
 }
+
+export async function fetchHFModelInfo(repoId) {
+  const res = await fetch(`/api/hf/model/info?id=${encodeURIComponent(repoId)}`);
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `Failed to fetch model info: ${res.status}`);
+  }
+  return res.json();
+}

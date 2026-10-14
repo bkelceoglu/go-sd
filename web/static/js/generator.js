@@ -1,6 +1,6 @@
-import { generateArtStream } from './api.js?v=9';
-import { state, emit } from './state.js?v=9';
-import { focusModelPanel, openModelModal } from './model_manager.js?v=9';
+import { generateArtStream } from './api.js?v=10';
+import { state, emit } from './state.js?v=10';
+import { focusModelPanel, openModelModal } from './model_manager.js?v=10';
 
 export function initGenerator(onStart, onProgress, onSuccess, onError) {
   const form = document.getElementById('generatorForm');

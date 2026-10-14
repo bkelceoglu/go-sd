@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -34,6 +35,21 @@ type HFModelItem struct {
 	PipelineTag  string        `json:"pipeline_tag"`
 	Files        []HFModelFile `json:"files"`
 	IsInstalled  bool          `json:"is_installed"`
+}
+
+// HFModelDetail provides rich metadata when the user inspects a model.
+type HFModelDetail struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Author      string   `json:"author"`
+	BaseModel   string   `json:"base_model,omitempty"`
+	License     string   `json:"license,omitempty"`
+	PipelineTag string   `json:"pipeline_tag,omitempty"`
+	Downloads   int      `json:"downloads"`
+	Likes       int      `json:"likes"`
+	Tags        []string `json:"tags,omitempty"`
+	Summary     string   `json:"summary,omitempty"`
+	HFURL       string   `json:"hf_url"`
 }
 
 // HFSearchResponse contains paginated model results.
@@ -65,10 +81,10 @@ type DownloadTask struct {
 
 // HFDownloader handles searching HuggingFace Hub and downloading models into the local folder.
 type HFDownloader struct {
-	mu           sync.RWMutex
-	tasks        map[string]*DownloadTask
-	modelsDir    string
-	httpClient   *http.Client
+	mu         sync.RWMutex
+	tasks      map[string]*DownloadTask
+	modelsDir  string
+	httpClient *http.Client
 }
 
 // NewHFDownloader creates a downloader with the specified destination folder.
@@ -131,6 +147,10 @@ func (d *HFDownloader) Search(ctx context.Context, query string, page int, limit
 	}
 
 	pagedItems := filtered[start:end]
+
+	// Populate exact file sizes concurrently for displayed items
+	d.populateFileSizes(ctx, pagedItems)
+
 	return &HFSearchResponse{
 		Items:      pagedItems,
 		Page:       page,
@@ -139,6 +159,130 @@ func (d *HFDownloader) Search(ctx context.Context, query string, page int, limit
 		TotalPages: totalPages,
 		HasPrev:    page > 1,
 		HasNext:    page < totalPages,
+	}, nil
+}
+
+// populateFileSizes queries the repo tree concurrently to extract exact byte sizes of safetensors files.
+func (d *HFDownloader) populateFileSizes(ctx context.Context, items []HFModelItem) {
+	if len(items) == 0 {
+		return
+	}
+
+	var wg sync.WaitGroup
+	client := &http.Client{Timeout: 4 * time.Second}
+
+	for i := range items {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			repoID := items[idx].ID
+			treeURL := fmt.Sprintf("https://huggingface.co/api/models/%s/tree/main", repoID)
+			req, err := http.NewRequestWithContext(ctx, "GET", treeURL, nil)
+			if err != nil {
+				return
+			}
+
+			resp, err := client.Do(req)
+			if err != nil || resp.StatusCode != http.StatusOK {
+				if resp != nil {
+					_ = resp.Body.Close()
+				}
+				return
+			}
+
+			var treeEntries []struct {
+				Path string `json:"path"`
+				Size int64  `json:"size"`
+			}
+			_ = json.NewDecoder(resp.Body).Decode(&treeEntries)
+			_ = resp.Body.Close()
+
+			sizeMap := make(map[string]int64, len(treeEntries))
+			for _, entry := range treeEntries {
+				sizeMap[entry.Path] = entry.Size
+			}
+
+			for fIdx := range items[idx].Files {
+				fn := items[idx].Files[fIdx].Filename
+				if sz, found := sizeMap[fn]; found && sz > 0 {
+					gb := float64(sz) / (1024 * 1024 * 1024)
+					items[idx].Files[fIdx].SizeGB = math.Round(gb*10) / 10
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
+}
+
+// GetModelInfo fetches rich details, license, and model card summary from HuggingFace.
+func (d *HFDownloader) GetModelInfo(ctx context.Context, repoID string) (*HFModelDetail, error) {
+	apiURL := fmt.Sprintf("https://huggingface.co/api/models/%s", repoID)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating request failed: %w", err)
+	}
+
+	client := &http.Client{Timeout: 8 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("hf api request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("hf api returned status %d", resp.StatusCode)
+	}
+
+	var raw map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return nil, fmt.Errorf("decoding model info failed: %w", err)
+	}
+
+	author, name := d.splitRepoID(repoID)
+	downloads, _ := raw["downloads"].(float64)
+	likes, _ := raw["likes"].(float64)
+	tag, _ := raw["pipeline_tag"].(string)
+
+	var baseModel, license, summary string
+	if cardData, ok := raw["cardData"].(map[string]any); ok {
+		if lic, ok := cardData["license"].(string); ok {
+			license = lic
+		} else if licName, ok := cardData["license_name"].(string); ok {
+			license = licName
+		}
+		if bm, ok := cardData["base_model"].(string); ok {
+			baseModel = bm
+		}
+	}
+
+	if desc, ok := raw["description"].(string); ok && desc != "" {
+		summary = desc
+	}
+
+	var tags []string
+	if rawTags, ok := raw["tags"].([]any); ok {
+		for _, t := range rawTags {
+			if ts, ok := t.(string); ok && !strings.HasPrefix(ts, "base_model:") && !strings.HasPrefix(ts, "region:") {
+				tags = append(tags, ts)
+				if len(tags) >= 8 {
+					break
+				}
+			}
+		}
+	}
+
+	return &HFModelDetail{
+		ID:          repoID,
+		Name:        name,
+		Author:      author,
+		BaseModel:   baseModel,
+		License:     license,
+		PipelineTag: tag,
+		Downloads:   int(downloads),
+		Likes:       int(likes),
+		Tags:        tags,
+		Summary:     summary,
+		HFURL:       fmt.Sprintf("https://huggingface.co/%s", repoID),
 	}, nil
 }
 
@@ -229,7 +373,7 @@ func (d *HFDownloader) extractSafetensorsFiles(repoID string, item map[string]an
 		}
 		filename, _ := sm["rfilename"].(string)
 		if strings.HasSuffix(strings.ToLower(filename), ".safetensors") && !strings.Contains(filename, "/") {
-			// Exclude tiny lora/vae helper files if named specifically
+			// Exclude tiny lora helper files if named specifically
 			fnLower := strings.ToLower(filename)
 			if strings.Contains(fnLower, "_lora") {
 				continue

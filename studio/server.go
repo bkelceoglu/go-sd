@@ -75,6 +75,7 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/hf/download", s.handleHFDownload)
 	mux.HandleFunc("GET /api/hf/download/status", s.handleHFDownloadStatus)
 	mux.HandleFunc("POST /api/hf/download/cancel", s.handleHFDownloadCancel)
+	mux.HandleFunc("GET /api/hf/model/info", s.handleHFModelInfo)
 
 	// Static assets with no-cache headers for instant updates
 	staticDir := filepath.Join(s.webDir, "static")
@@ -566,4 +567,18 @@ func (s *Server) handleHFDownloadCancel(w http.ResponseWriter, r *http.Request) 
 	}
 	cancelled := s.downloader.CancelDownload(req.TaskID)
 	writeJSON(w, http.StatusOK, map[string]bool{"cancelled": cancelled})
+}
+
+func (s *Server) handleHFModelInfo(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "model id is required"})
+		return
+	}
+	info, err := s.downloader.GetModelInfo(r.Context(), id)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, info)
 }

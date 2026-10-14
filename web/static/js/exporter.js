@@ -1,5 +1,5 @@
-import { exportBundle } from './api.js?v=9';
-import { state } from './state.js?v=9';
+import { exportBundle } from './api.js?v=10';
+import { state } from './state.js?v=10';
 
 export function initExporter(onSuccess, onError) {
   const modal = document.getElementById('exportModal');

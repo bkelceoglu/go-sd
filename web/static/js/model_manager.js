@@ -7,9 +7,10 @@ import {
   searchHFModels,
   downloadHFModel,
   fetchHFDownloadStatus,
-  cancelHFDownload
-} from './api.js?v=9';
-import { state } from './state.js?v=9';
+  cancelHFDownload,
+  fetchHFModelInfo
+} from './api.js?v=10';
+import { state } from './state.js?v=10';
 
 let isBusy = false;
 let activeTab = 'local';
@@ -705,22 +706,33 @@ function renderHFModelCards(items) {
     m.files.forEach((f) => {
       const taskKey = `${m.id}/${f.filename}`;
       const activeTask = activeDownloadsMap[taskKey];
+      const sizeTag = f.size_gb ? `<strong class="file-size-tag">(${f.size_gb} GB)</strong>` : '';
 
       if (f.is_installed) {
         filesHtml += `
           <div class="hf-file-row" id="row_${sanitizeDomId(taskKey)}">
-            <span class="hf-file-name" title="${f.filename}">${f.filename}</span>
-            <span class="hf-installed-badge">✓ Installed</span>
+            <span class="hf-file-name" title="${f.filename}">${f.filename} ${sizeTag}</span>
+            <div class="hf-file-actions">
+              <button type="button" class="btn-hf-info" data-repo="${m.id}" title="Model Details & Specs">
+                <span>ℹ️ Info</span>
+              </button>
+              <span class="hf-installed-badge">✓ Installed</span>
+            </div>
           </div>`;
       } else if (activeTask && activeTask.status === 'downloading') {
         filesHtml += renderProgressWidgetHtml(taskKey, f.filename, activeTask);
       } else {
         filesHtml += `
           <div class="hf-file-row" id="row_${sanitizeDomId(taskKey)}">
-            <span class="hf-file-name" title="${f.filename}">${f.filename}</span>
-            <button type="button" class="btn-hf-download" data-repo="${m.id}" data-file="${f.filename}">
-              <span>⬇️ Download</span>
-            </button>
+            <span class="hf-file-name" title="${f.filename}">${f.filename} ${sizeTag}</span>
+            <div class="hf-file-actions">
+              <button type="button" class="btn-hf-info" data-repo="${m.id}" title="Model Details & Specs">
+                <span>ℹ️ Info</span>
+              </button>
+              <button type="button" class="btn-hf-download" data-repo="${m.id}" data-file="${f.filename}">
+                <span>⬇️ Download</span>
+              </button>
+            </div>
           </div>`;
       }
     });
@@ -745,7 +757,74 @@ function renderHFModelCards(items) {
       <div class="hf-card-files">
         ${filesHtml}
       </div>
+
+      <div class="hf-card-info-drawer hidden" id="info_${sanitizeDomId(m.id)}"></div>
     `;
+
+    // Attach info drawer toggle handlers
+    const infoButtons = card.querySelectorAll('.btn-hf-info');
+    infoButtons.forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const repo = btn.getAttribute('data-repo');
+        const drawerId = `info_${sanitizeDomId(repo)}`;
+        const drawer = document.getElementById(drawerId);
+        if (!drawer) return;
+
+        if (!drawer.classList.contains('hidden')) {
+          drawer.classList.add('hidden');
+          btn.classList.remove('active');
+          return;
+        }
+
+        drawer.classList.remove('hidden');
+        btn.classList.add('active');
+        drawer.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-dim); padding: 6px 0;">
+            <span class="btn-spinner" style="width: 12px; height: 12px;"></span>
+            <span>Loading model specs & architecture...</span>
+          </div>`;
+
+        try {
+          const info = await fetchHFModelInfo(repo);
+          const baseModel = info.base_model || 'SDXL 1.0 (Text-to-Image)';
+          const license = info.license || 'Open Community / Research';
+          const tagsHtml = (info.tags && info.tags.length > 0)
+            ? info.tags.map(t => `<span class="info-tag-pill">${t}</span>`).join('')
+            : '<span class="info-tag-pill">sdxl</span>';
+
+          drawer.innerHTML = `
+            <div class="info-drawer-grid">
+              <div class="info-drawer-item">
+                <span class="info-drawer-label">Base Architecture</span>
+                <span class="info-drawer-val">${baseModel}</span>
+              </div>
+              <div class="info-drawer-item">
+                <span class="info-drawer-label">License</span>
+                <span class="info-drawer-val" title="${license}">${license}</span>
+              </div>
+              <div class="info-drawer-item">
+                <span class="info-drawer-label">Recommended VRAM</span>
+                <span class="info-drawer-val" style="color: #38bdf8;">8GB - 16GB (bfloat16)</span>
+              </div>
+              <div class="info-drawer-item">
+                <span class="info-drawer-label">Hardware Engine</span>
+                <span class="info-drawer-val" style="color: #34d399;">Intel Arc XPU (IPEX)</span>
+              </div>
+            </div>
+            ${info.summary ? `<div class="info-drawer-summary">${info.summary}</div>` : ''}
+            <div class="info-drawer-tags">${tagsHtml}</div>
+            <div class="info-drawer-footer">
+              <a href="${info.hf_url || `https://huggingface.co/${repo}`}" target="_blank" rel="noopener noreferrer" class="info-drawer-link">
+                Open Model Card on HuggingFace Hub ↗
+              </a>
+            </div>
+          `;
+        } catch (err) {
+          drawer.innerHTML = `<span style="font-size: 11px; color: #f87171;">Failed to load model details: ${err.message}</span>`;
+        }
+      });
+    });
 
     // Attach download handlers
     const dlButtons = card.querySelectorAll('.btn-hf-download');

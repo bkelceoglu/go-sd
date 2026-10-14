@@ -1,10 +1,10 @@
-import { fetchStatus, fetchPresets, fetchGallery, deleteGalleryImages } from './api.js?v=9';
-import { state, clearSelection } from './state.js?v=9';
-import { initGenerator, populatePresets } from './generator.js?v=9';
-import { initGallery, renderGallery, createLiveCard, updateLiveProgress, removeLiveCard } from './gallery.js?v=9';
-import { initExporter, openExportModal } from './exporter.js?v=9';
-import { initLightbox, openLightbox } from './lightbox.js?v=9';
-import { initModelManager, updateModelUI, populateModelsDropdown } from './model_manager.js?v=9';
+import { fetchStatus, fetchPresets, fetchGallery, deleteGalleryImages } from './api.js?v=10';
+import { state, clearSelection } from './state.js?v=10';
+import { initGenerator, populatePresets } from './generator.js?v=10';
+import { initGallery, renderGallery, createLiveCard, updateLiveProgress, removeLiveCard } from './gallery.js?v=10';
+import { initExporter, openExportModal } from './exporter.js?v=10';
+import { initLightbox, openLightbox } from './lightbox.js?v=10';
+import { initModelManager, updateModelUI, populateModelsDropdown } from './model_manager.js?v=10';
 
 function bootStudio() {
   console.log('[GO-SD] Initializing studio components...');
