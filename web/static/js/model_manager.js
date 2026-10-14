@@ -231,7 +231,7 @@ export function populateModelsDropdown(models) {
       card.className = `installed-card ${m.is_active ? 'active-model' : ''} ${isSelected ? 'selected-model' : ''}`;
       card.setAttribute('data-path', m.path);
 
-      const origin = m.path.includes('sdnext') ? 'SD.Next' : 'models/Stable-diffusion';
+      const origin = m.path.includes('models') ? 'models/Stable-diffusion' : 'Custom Checkpoint';
 
       card.innerHTML = `
         <div class="installed-card-left">

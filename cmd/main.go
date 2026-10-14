@@ -18,8 +18,8 @@ import (
 
 func main() {
 	port := flag.Int("port", 8080, "HTTP server listening port")
-	pythonPath := flag.String("python", "/home/caveman/sdnext/.venv/bin/python", "Path to python executable with torch.xpu")
-	modelPath := flag.String("model", "/home/caveman/sdnext/models/Stable-diffusion/juggernautXL_version2.safetensors", "Path to SDXL safetensors checkpoint")
+	pythonPath := flag.String("python", ".venv/bin/python", "Path to python executable with torch.xpu")
+	modelPath := flag.String("model", "models/Stable-diffusion/juggernautXL_version2.safetensors", "Path to SDXL safetensors checkpoint")
 	device := flag.String("device", "xpu", "Compute device (xpu, cuda, cpu)")
 	flag.Parse()
 
@@ -29,6 +29,15 @@ func main() {
 		log.Fatalf("Getting working directory failed: %v", err)
 	}
 
+	absPython := *pythonPath
+	if !filepath.IsAbs(absPython) {
+		absPython = filepath.Join(rootDir, absPython)
+	}
+	absModel := *modelPath
+	if !filepath.IsAbs(absModel) {
+		absModel = filepath.Join(rootDir, absModel)
+	}
+
 	workerScript := filepath.Join(rootDir, "engine", "worker.py")
 	webDir := filepath.Join(rootDir, "web")
 	outputDir := filepath.Join(rootDir, "output")
@@ -36,13 +45,13 @@ func main() {
 	_ = os.MkdirAll(filepath.Join(outputDir, "bundles"), 0755)
 
 	log.Printf("[GO-SD] Initializing Embedded Engine...")
-	log.Printf("[GO-SD] Model: %s", *modelPath)
+	log.Printf("[GO-SD] Model: %s", absModel)
 	log.Printf("[GO-SD] Device: %s", *device)
 
 	engConfig := engine.Config{
-		PythonPath:   *pythonPath,
+		PythonPath:   absPython,
 		WorkerScript: workerScript,
-		ModelPath:    *modelPath,
+		ModelPath:    absModel,
 		Device:       *device,
 	}
 

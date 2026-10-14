@@ -78,8 +78,8 @@
 | **GPU Hardware** | Intel Arc Graphics (Driver: i915 / Xe) |
 | **PyTorch Device** | `torch.xpu` (Intel Extension for PyTorch - IPEX) |
 | **Precision** | `torch.bfloat16` with VAE Tiling & Attention Slicing |
-| **Python Venv** | `/home/caveman/sdnext/.venv/bin/python` |
-| **Default Checkpoint** | `/home/caveman/sdnext/models/Stable-diffusion/juggernautXL_version2.safetensors` (6.5 GB) |
+| **Python Venv** | `.venv/bin/python` |
+| **Default Checkpoint** | `models/Stable-diffusion/juggernautXL_version2.safetensors` (6.5 GB) |
 | **Scheduler** | `EulerAncestralDiscreteScheduler` (Euler-A) |
 | **Go Compiler** | `/usr/local/go/bin/go` (Go 1.27+) |
 | **Default Web Port** | `8080` (CLI flag `-port 8080`) |

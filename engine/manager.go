@@ -417,7 +417,7 @@ func (m *Manager) ScanAvailableModels(modelsDir string) []ModelInfo {
 	isReady := m.isReady && m.cmd != nil && m.cmd.Process != nil
 	m.mu.Unlock()
 
-	searchDirs := []string{modelsDir, "/home/caveman/sdnext/models/Stable-diffusion", "models/Stable-diffusion", "models"}
+	searchDirs := []string{modelsDir, "models/Stable-diffusion", "models"}
 	seenPaths := make(map[string]bool)
 	var models []ModelInfo
 
@@ -443,7 +443,11 @@ func (m *Manager) ScanAvailableModels(modelsDir string) []ModelInfo {
 				seenPaths[absPath] = true
 
 				name := strings.TrimSuffix(info.Name(), ".safetensors")
-				sizeGB := float64(info.Size()) / (1024 * 1024 * 1024)
+				fileSize := info.Size()
+				if fi, err := os.Stat(path); err == nil && fi != nil {
+					fileSize = fi.Size()
+				}
+				sizeGB := float64(fileSize) / (1024 * 1024 * 1024)
 				models = append(models, ModelInfo{
 					Name:     name,
 					Filename: info.Name(),

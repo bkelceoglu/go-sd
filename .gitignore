@@ -7,6 +7,7 @@ bin/
 *.out
 __pycache__/
 *.py[cod]
+.venv
 .venv/
 env/
 venv/
@@ -18,3 +19,8 @@ output/bundles/*
 output/*.jpg
 output/*.png
 test_inference_mode.jpg
+models/**/*.safetensors
+models/*.safetensors
+models/**/*.tmp
+models/*.tmp
+!models/Stable-diffusion/.gitkeep

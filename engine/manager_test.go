@@ -11,8 +11,8 @@ import (
 )
 
 func TestEmbeddedEngine_EndToEndGeneration(t *testing.T) {
-	pythonPath := "/home/caveman/sdnext/.venv/bin/python"
-	modelPath := "/home/caveman/sdnext/models/Stable-diffusion/juggernautXL_version2.safetensors"
+	pythonPath := ".venv/bin/python"
+	modelPath := "models/Stable-diffusion/juggernautXL_version2.safetensors"
 
 	if _, err := os.Stat(pythonPath); os.IsNotExist(err) {
 		t.Skip("Python venv not found, skipping integration test")

@@ -68,7 +68,6 @@ type HFDownloader struct {
 	mu           sync.RWMutex
 	tasks        map[string]*DownloadTask
 	modelsDir    string
-	sdnextDir    string
 	httpClient   *http.Client
 }
 
@@ -78,7 +77,6 @@ func NewHFDownloader(modelsDir string) *HFDownloader {
 	return &HFDownloader{
 		tasks:     make(map[string]*DownloadTask),
 		modelsDir: modelsDir,
-		sdnextDir: "/home/caveman/sdnext/models/Stable-diffusion",
 		httpClient: &http.Client{
 			Timeout: 0, // No timeout on file streaming downloads
 		},
@@ -252,10 +250,6 @@ func (d *HFDownloader) extractSafetensorsFiles(repoID string, item map[string]an
 func (d *HFDownloader) checkFileInstalled(filename string) bool {
 	localPath := filepath.Join(d.modelsDir, filename)
 	if _, err := os.Stat(localPath); err == nil {
-		return true
-	}
-	sdnextPath := filepath.Join(d.sdnextDir, filename)
-	if _, err := os.Stat(sdnextPath); err == nil {
 		return true
 	}
 	return false
