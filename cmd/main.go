@@ -12,16 +12,24 @@ import (
 	"syscall"
 	"time"
 
-	"go-sd/engine"
-	"go-sd/studio"
+	"github.com/bkelceoglu/go-sd/engine"
+	"github.com/bkelceoglu/go-sd/studio"
 )
+
+var version = "0.1.0-dev"
 
 func main() {
 	port := flag.Int("port", 8080, "HTTP server listening port")
 	pythonPath := flag.String("python", ".venv/bin/python", "Path to python executable with torch.xpu")
 	modelPath := flag.String("model", "models/Stable-diffusion/juggernautXL_version2.safetensors", "Path to SDXL safetensors checkpoint")
 	device := flag.String("device", "xpu", "Compute device (xpu, cuda, cpu)")
+	showVersion := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("go-sd v%s\n", version)
+		return
+	}
 
 	// Resolve directories
 	rootDir, err := os.Getwd()

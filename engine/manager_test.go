@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"go-sd/engine"
+	"github.com/bkelceoglu/go-sd/engine"
 )
 
 func TestEmbeddedEngine_EndToEndGeneration(t *testing.T) {

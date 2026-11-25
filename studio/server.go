@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"go-sd/engine"
+	"github.com/bkelceoglu/go-sd/engine"
 )
 
 // Server coordinates HTTP routing, template rendering, and API execution.
@@ -24,8 +24,8 @@ type Server struct {
 	exporter   *Exporter
 	downloader *HFDownloader
 	webDir     string
-	outputDir string
-	tmpl      *template.Template
+	outputDir  string
+	tmpl       *template.Template
 }
 
 // NewServer builds and configures a new Studio HTTP server.
@@ -531,7 +531,6 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
 }
-
 
 func (s *Server) handleHFSearch(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")

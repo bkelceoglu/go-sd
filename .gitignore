@@ -1,17 +1,26 @@
+# Binaries & Distribution Artifacts
 bin/
+dist/
 *.exe
 *.dll
 *.so
 *.dylib
 *.test
 *.out
+coverage.txt
+
+# Documentation (excluded from repo)
+docs/
+
+# Python / Worker Virtual Environments & Cache
 __pycache__/
 *.py[cod]
 .venv
 .venv/
 env/
 venv/
-.DS_Store
+
+# Generated Outputs
 output/images/*
 !output/images/.gitkeep
 output/bundles/*
@@ -19,10 +28,23 @@ output/bundles/*
 output/*.jpg
 output/*.png
 test_inference_mode.jpg
-models/**/*.safetensors
-models/*.safetensors
-models/**/*.tmp
-models/*.tmp
-!models/Stable-diffusion/.gitkeep
+
+# AI Model Weights & Checkpoints (keep folder structure only)
+models/*
+!models/OpenVINO/
 models/OpenVINO/*
 !models/OpenVINO/.gitkeep
+!models/Stable-diffusion/
+models/Stable-diffusion/*
+!models/Stable-diffusion/.gitkeep
+
+# Environment & Secrets
+.env
+.env.*
+
+# OS & IDE Files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"go-sd/engine"
+	"github.com/bkelceoglu/go-sd/engine"
 )
 
 // EngineManager defines the interface for diffusion and model management.
